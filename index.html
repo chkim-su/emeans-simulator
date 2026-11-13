@@ -82,7 +82,7 @@ input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px;
 .field > label, .field > .lbl { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 6px; }
 .field output { font-family: var(--font-data); color: var(--ink); font-size: 12px; }
 .check { display: flex; align-items: center; gap: 7px; font-size: 13px; cursor: pointer; }
-.toolbar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s2) var(--s3); align-items: end; }
+.toolbar { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--s2) var(--s3); align-items: end; }
 .seed-row { display: flex; gap: 4px; }
 .seed-row input { flex: 1; }
 .transport { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin-top: var(--s3); }
@@ -136,7 +136,7 @@ details.adv[open] summary svg { transform: rotate(90deg); }
 
 /* batch tab */
 .batch-intro { max-width: 72ch; color: var(--muted); font-size: 13px; margin-bottom: var(--s3); }
-.batch-tools { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--s2) var(--s3); align-items: end; }
+.batch-tools { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s2) var(--s3); align-items: end; }
 .run-row { display: flex; align-items: center; gap: var(--s3); margin-top: var(--s3); flex-wrap: wrap; }
 .progress { height: 5px; background: var(--chip); border-radius: 3px; overflow: hidden; flex: 1 1 140px; max-width: 320px; }
 .progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 160ms ease-out; }
@@ -154,10 +154,17 @@ th { font-weight: 600; color: var(--muted); font-size: 12px; }
 td.r, th.r { text-align: right; font-family: var(--font-data); font-variant-numeric: tabular-nums; }
 footer { margin-top: var(--s4); font-size: 11.5px; color: var(--muted); }
 
+.hint { font-size: 11.5px; color: var(--muted); line-height: 1.4; min-height: 16px; }
+button.linkish { border: 0; background: none; padding: 0; color: var(--accent); font-size: 11.5px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+button.linkish:hover:not(:disabled) { background: none; opacity: 0.8; }
+.live-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-right: 6px; animation: pulse 1.2s ease-out infinite; vertical-align: 1px; }
+@keyframes pulse { 0% { opacity: 1; } 100% { opacity: 0.25; } }
+button.stop { background: var(--warn); border-color: var(--warn); color: #fff; }
+@media (max-width: 1000px) { .toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 760px) {
   .toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .adv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .batch-tools { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .batch-tools { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .timeline { grid-template-columns: 1fr; }
   .clock { margin-left: 0; width: 100%; }
 }
@@ -196,14 +203,14 @@ footer { margin-top: var(--s4); font-size: 11.5px; color: var(--muted); }
     <div class="field"><label for="cT">e-means 예산 T</label><select id="cT">
       <option value="0.5">0.5 에폭</option><option value="1">1 에폭</option><option value="2">2 에폭</option><option value="3" selected>3 에폭</option><option value="5">5 에폭</option><option value="10">10 에폭</option>
     </select></div>
+    <div class="field"><label for="cB">배치 크기 B <output id="cBOut"></output></label><input type="range" id="cB" min="3" max="10" step="1" value="7"><span class="hint num" id="cBInfo"></span></div>
+    <div class="field"><label for="cEta">첫 이동 폭 η₀ <output id="cEtaOut"></output></label><input type="range" id="cEta" min="0.02" max="1" step="0.02" value="0.6"><span class="hint"><button id="cLaw" class="linkish" type="button">논문 공식으로 맞추기</button> <span class="num" id="cLawOut"></span></span></div>
   </div>
 
   <details class="adv" id="adv">
     <summary><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1.5 7 5 3 8.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>세부 설정 <span class="muted small" id="advSummary"></span></summary>
     <div class="adv-grid">
       <div class="field"><label for="cK">중심 개수 k <output id="cKOut"></output></label><input type="range" id="cK" min="2" max="30" step="1" value="3"></div>
-      <div class="field"><label for="cB">배치 크기 B <output id="cBOut"></output></label><input type="range" id="cB" min="3" max="10" step="1" value="7"></div>
-      <div class="field"><label for="cEta">첫 이동 폭 η₀ <output id="cEtaOut"></output></label><input type="range" id="cEta" min="0.02" max="1" step="0.02" value="0.6"></div>
       <div class="field"><label for="cRho">마지막/처음 비율 ρ <output id="cRhoOut"></output></label><input type="range" id="cRho" min="0" max="1" step="0.05" value="0.1"></div>
       <div class="field"><label for="cRev">e-means 죽은 군집 처리</label><select id="cRev">
         <option value="split">분할 재활성화 (논문)</option><option value="resample">배치 점으로 재표본화</option><option value="off">처리 안 함</option>
@@ -214,10 +221,6 @@ footer { margin-top: var(--s4); font-size: 11.5px; color: var(--muted); }
       </div>
       <div class="field"><span class="lbl">Lloyd 기준선</span>
         <label class="check"><input type="checkbox" id="cSplit"> 빈 군집 분할 (Faiss식)</label>
-      </div>
-      <div class="field"><span class="lbl">논문 공식 (식 6–7)</span>
-        <div class="law"><button id="cLaw" type="button">B, η₀ 자동 설정</button></div>
-        <span class="small muted num" id="cLawOut"></span>
       </div>
     </div>
   </details>
@@ -273,12 +276,14 @@ footer { margin-top: var(--s4); font-size: 11.5px; color: var(--muted); }
     <div class="field"><label for="mInit">초기 중심</label><select id="mInit"><option value="random" selected>무작위</option><option value="kpp">k-means++</option><option value="crowd">한곳에 몰림</option><option value="bad">나쁜 초기화</option></select></div>
     <div class="field"><label for="mSeeds">시드 수</label><select id="mSeeds"><option selected>10</option><option>20</option><option>40</option></select></div>
     <div class="field"><label for="mT">e-means 예산 T</label><select id="mT"><option value="1">1 에폭</option><option value="2">2 에폭</option><option value="3" selected>3 에폭</option><option value="5">5 에폭</option></select></div>
-    <div class="field"><label for="mHyp">B와 η₀</label><select id="mHyp"><option value="law" selected>논문 공식</option><option value="lab">한 번 실행 탭의 값</option></select></div>
+    <div class="field"><label for="mMode">비교 대상</label><select id="mMode"><option value="methods" selected>방법 비교</option><option value="sweep">배치 크기 비교 (e-means)</option></select></div>
+    <div class="field"><label for="mB">배치 크기 B</label><select id="mB"><option value="law" selected>논문 공식</option><option>32</option><option>64</option><option>128</option><option>256</option><option>512</option><option>1024</option></select></div>
+    <div class="field"><label for="mEta">첫 이동 폭 η₀</label><select id="mEta"><option value="law" selected>논문 공식 (B에 맞춤)</option><option>0.1</option><option>0.2</option><option>0.3</option><option>0.5</option><option>0.7</option><option>1.0</option></select></div>
   </div>
   <div class="run-row">
     <button class="primary" id="mRun" type="button">비교 실행</button>
     <div class="progress" aria-hidden="true"><i id="mProg"></i></div>
-    <span class="small muted num" id="mStatus" aria-live="polite">고차원 k=64, 10시드 기준 약 30초 · k가 클수록 오래 걸림</span>
+    <span class="small muted num" id="mStatus" aria-live="polite">결과는 시드마다 바로 갱신 · 고차원 k=64, 10시드 약 30초 · 실행 중 버튼으로 중지</span>
   </div>
   <div class="batch-out" id="mOut"><div class="empty">아직 실행 전 · “비교 실행” → 시드마다 Lloyd 2종, Sculley, e-means 예산 7가지·변형 4가지 학습 → 시드별 분포, 에폭별 중앙값 곡선, 표 표시</div></div>
 </section>
@@ -572,37 +577,171 @@ function runEM(D, C0, o) { const E = new EMeans(D, C0, o); while (!E.done) E.ste
 function clusterCounts(m, D) { const cnt = new Float64Array(m.k); mseOf(D.X, D.ntr, D.d, m.C, m.k, null, cnt); return cnt; }
 function deadCount(m, D) { let z = 0; for (const c of clusterCounts(m, D)) if (c < 10) z++; return z; }
 function emptyCount(m, D) { let z = 0; for (const c of clusterCounts(m, D)) if (c === 0) z++; return z; }
+let BATCH_STOP = false;
+const tick = () => new Promise(r => setTimeout(r, 0));
+function etaLaw(n, k, B, T) { return Math.min(0.824 * Math.pow(k, -0.46) * Math.pow(B, 0.90) * Math.pow(n, -0.45) * Math.pow(T, -0.11), 1); }
+function batchStatus(html) { $('mStatus').innerHTML = html; }
+function setRunButton(running) {
+  const b = $('mRun'); b.disabled = false;
+  b.textContent = running ? '중지' : (LAST_BATCH ? '다시 실행' : '비교 실행');
+  b.classList.toggle('stop', running); b.classList.toggle('primary', !running);
+}
 async function runBatch() {
-  if (BATCH_RUNNING) return; BATCH_RUNNING = true; $('mRun').disabled = true; $('mRun').textContent = '실행 중…'; $('mOut').innerHTML = '<div class="empty">계산 중 · 완료된 시드 수는 위에 표시</div>';
+  if (BATCH_RUNNING) { BATCH_STOP = true; $('mRun').disabled = true; batchStatus('중지하는 중 · 지금 계산 중인 단계가 끝나면 멈춤'); return; }
+  BATCH_RUNNING = true; BATCH_STOP = false; setRunButton(true);
+  const mode = $('mMode').value;
   const key = $('mData').value, k = +$('mK').value, init = $('mInit').value, NS = +$('mSeeds').value, T = +$('mT').value;
   const D = makeData(key, 1);
-  let hp = $('mHyp').value === 'law' ? lawHyper(D.ntr, k, T) : { B: BVALS[+$('cB').value - 3], eta0: +$('cEta').value };
-  const base = { B: hp.B, eta0: hp.eta0, rho: 0.1, cosine: true, revival: 'split', finalize: true, T };
-  const res = { rows: {}, curves: { L1: [], L2: [], S: [], E: [] }, dead: {}, cfg: { key, k, init, NS, T, ...hp, ntr: D.ntr, nte: D.nte, d: D.d } };
-  res.empty = {}; MROWS.forEach(r => { res.rows[r.id] = []; res.dead[r.id] = []; res.empty[r.id] = []; });
-  const nb = Math.ceil(D.ntr / hp.B);
+  const law = lawHyper(D.ntr, k, T);
+  const Bsel = $('mB').value === 'law' ? law.B : +$('mB').value;
+  const etaFor = B => $('mEta').value === 'law' ? etaLaw(D.ntr, k, B, T) : +$('mEta').value;
+  $('mProg').style.width = '0%';
+  $('mOut').innerHTML = '<div class="empty"><span class="live-dot"></span>첫 시드 계산 중 · 시드가 끝날 때마다 결과가 여기에 쌓임</div>';
+  try {
+    if (mode === 'sweep') await runSweep(D, { key, k, init, NS, T });
+    else await runMethods(D, { key, k, init, NS, T, B: Bsel, eta0: etaFor(Bsel) });
+  } finally {
+    BATCH_RUNNING = false; setRunButton(false);
+  }
+}
+function stepLabel(s, NS, what) { return `<span class="live-dot"></span>시드 ${s}/${NS} · ${what}`; }
+async function lloydSculley(D, C0, s, B, NS, out) {
+  const nb = Math.ceil(D.ntr / B);
+  const L1 = new Lloyd(D, C0, { split: false, seed: s }), L2 = new Lloyd(D, C0, { split: true, seed: s }), Sc = out.sculley ? new Sculley(D, C0, { B, seed: s }) : null;
+  const c1 = [], c2 = [], cs = [];
+  for (let ep = 1; ep <= 25; ep++) {
+    L1.step(); L2.step(); c1.push(testMSE(L1, D)); c2.push(testMSE(L2, D));
+    if (Sc) { for (let b = 0; b < nb; b++) Sc.stepBatch(); cs.push(testMSE(Sc, D)); }
+    if (ep % 5 === 0) { batchStatus(stepLabel(s, NS, `Lloyd${Sc ? '·Sculley' : ''} ${ep}/25에폭`)); await tick(); if (BATCH_STOP) return null; }
+  }
+  return { L1, L2, Sc, c1, c2, cs };
+}
+async function runMethods(D, cfg) {
+  const { k, init, NS, T, B, eta0 } = cfg;
+  const base = { B, eta0, rho: 0.1, cosine: true, revival: 'split', finalize: true, T };
+  const res = { rows: {}, curves: { L1: [], L2: [], S: [], E: [] }, dead: {}, empty: {}, cfg: { ...cfg, ntr: D.ntr, nte: D.nte, d: D.d }, live: true };
+  LAST_SWEEP = null;
+  MROWS.forEach(r => { res.rows[r.id] = []; res.dead[r.id] = []; res.empty[r.id] = []; });
+  const t0 = performance.now();
   for (let s = 1; s <= NS; s++) {
     const C0 = initCentroids(D, k, init, mulberry32(s * 7717 + 3));
-    const L1 = new Lloyd(D, C0, { split: false, seed: s }), L2 = new Lloyd(D, C0, { split: true, seed: s }), Sc = new Sculley(D, C0, { B: hp.B, seed: s });
-    const c1 = [], c2 = [], cs = [];
-    for (let ep = 1; ep <= 25; ep++) { L1.step(); L2.step(); for (let b = 0; b < nb; b++) Sc.stepBatch(); c1.push(testMSE(L1, D)); c2.push(testMSE(L2, D)); cs.push(testMSE(Sc, D)); }
-    const ref = c2[24];
-    const rel = v => (v - ref) / ref * 100;
-    res.curves.L1.push(c1.map(rel)); res.curves.L2.push(c2.map(rel)); res.curves.S.push(cs.map(rel));
-    res.rows.L2.push(0); res.rows.L1.push(rel(c1[24])); res.rows.S.push(rel(cs[24]));
-    res.dead.L1.push(deadCount(L1, D)); res.empty.L1.push(emptyCount(L1, D)); res.dead.L2.push(deadCount(L2, D)); res.empty.L2.push(emptyCount(L2, D)); res.dead.S.push(deadCount(Sc, D)); res.empty.S.push(emptyCount(Sc, D));
-    const bc = [];
-    for (const Tb of BUDGETS) { const E = runEM(D, C0, { ...base, T: Tb, seed: s }); const v = rel(testMSE(E, D)); bc.push(v); if (Tb === T) { res.rows.E.push(v); res.dead.E.push(deadCount(E, D)); res.empty.E.push(emptyCount(E, D)); } }
-    res.curves.E.push(bc);
+    const ls = await lloydSculley(D, C0, s, B, NS, { sculley: true }); if (!ls) break;
+    const { L1, L2, Sc, c1, c2, cs } = ls;
+    const ref = c2[24], rel = v => (v - ref) / ref * 100;
+    const rec = { L1: [rel(c1[24]), L1], L2: [0, L2], S: [rel(cs[24]), Sc] };
+    const bc = []; let stopped = false;
+    for (const Tb of BUDGETS) {
+      batchStatus(stepLabel(s, NS, `e-means 예산 ${Tb}에폭`)); await tick(); if (BATCH_STOP) { stopped = true; break; }
+      const E = runEM(D, C0, { ...base, T: Tb, eta0: $('mEta').value === 'law' ? etaLaw(D.ntr, k, B, Tb) : eta0, seed: s });
+      const v = rel(testMSE(E, D)); bc.push(v); if (Tb === T) rec.E = [v, E];
+    }
     const variants = { Enc: { cosine: false }, Enr: { revival: 'off' }, Ers: { revival: 'resample' }, Enf: { finalize: false } };
-    for (const [id, ov] of Object.entries(variants)) { const E = runEM(D, C0, { ...base, ...ov, seed: s }); res.rows[id].push(rel(testMSE(E, D))); res.dead[id].push(deadCount(E, D)); res.empty[id].push(emptyCount(E, D)); }
-    $('mProg').style.width = (100 * s / NS).toFixed(0) + '%'; $('mStatus').textContent = `${s} / ${NS} 시드 완료`;
-    await new Promise(r => setTimeout(r, 0));
+    for (const [id, ov] of Object.entries(variants)) {
+      if (stopped) break;
+      batchStatus(stepLabel(s, NS, `변형: ${MROWS.find(r => r.id === id).name.split('· ')[1]}`)); await tick(); if (BATCH_STOP) { stopped = true; break; }
+      const E = runEM(D, C0, { ...base, ...ov, seed: s }); rec[id] = [rel(testMSE(E, D)), E];
+    }
+    if (stopped) break;
+    // commit the whole seed at once so every row always has the same number of seeds
+    for (const [id, [v, m]] of Object.entries(rec)) { res.rows[id].push(v); res.dead[id].push(deadCount(m, D)); res.empty[id].push(emptyCount(m, D)); }
+    res.curves.L1.push(c1.map(rel)); res.curves.L2.push(c2.map(rel)); res.curves.S.push(cs.map(rel)); res.curves.E.push(bc);
+    LAST_BATCH = res; res.live = s < NS; renderBatch(res);
+    $('mProg').style.width = (100 * s / NS).toFixed(0) + '%';
+    const per = (performance.now() - t0) / s / 1000;
+    batchStatus(s < NS ? stepLabel(s + 1, NS, `시작 · 남은 시간 약 ${Math.ceil(per * (NS - s))}초`) : '');
   }
-  LAST_BATCH = res; renderBatch(res);
-  $('mStatus').textContent = `완료 · n=${D.ntr}, d=${D.d}, k=${k}, B=${hp.B}, η₀=${hp.eta0.toFixed(2)}`;
-  BATCH_RUNNING = false; $('mRun').disabled = false; $('mRun').textContent = '다시 실행';
+  const done = res.rows.E.length;
+  res.live = false; if (done) renderBatch(res);
+  batchStatus(BATCH_STOP ? `${done}/${NS} 시드에서 중지 · 완료된 시드만 표시` : `완료 · n=${D.ntr}, d=${D.d}, k=${k}, B=${B}, η₀=${eta0.toFixed(2)}`);
+  if (!done) $('mOut').innerHTML = '<div class="empty">완료된 시드가 없음 · 다시 실행</div>';
 }
+
+/* ---------- batch-size sweep ---------- */
+const SWEEP_B = [16, 32, 64, 128, 256, 512, 1024];
+let LAST_SWEEP = null;
+async function runSweep(D, cfg) {
+  const { k, init, NS, T } = cfg;
+  const Bs = SWEEP_B.filter(b => b <= D.ntr / 2);
+  const res = { Bs, rel: {}, dead: {}, ms: {}, eta: {}, U: {}, cfg: { ...cfg, ntr: D.ntr, nte: D.nte, d: D.d }, live: true, seeds: 0 };
+  Bs.forEach(B => { res.rel[B] = []; res.dead[B] = []; res.ms[B] = []; res.eta[B] = $('mEta').value === 'law' ? etaLaw(D.ntr, k, B, T) : +$('mEta').value; res.U[B] = Math.max(1, Math.round(T * Math.ceil(D.ntr / B))); });
+  LAST_BATCH = null; LAST_SWEEP = res;
+  const t0 = performance.now();
+  for (let s = 1; s <= NS; s++) {
+    const C0 = initCentroids(D, k, init, mulberry32(s * 7717 + 3));
+    const ls = await lloydSculley(D, C0, s, 64, NS, { sculley: false }); if (!ls) break;
+    const ref = ls.c2[24];
+    const rec = {}; let stopped = false;
+    for (const B of Bs) {
+      batchStatus(stepLabel(s, NS, `e-means B=${B}`)); await tick(); if (BATCH_STOP) { stopped = true; break; }
+      const t1 = performance.now();
+      const E = runEM(D, C0, { B, eta0: res.eta[B], rho: 0.1, cosine: true, revival: 'split', finalize: true, T, seed: s });
+      rec[B] = [(testMSE(E, D) - ref) / ref * 100, deadCount(E, D), performance.now() - t1];
+    }
+    if (stopped) break;
+    Bs.forEach(B => { res.rel[B].push(rec[B][0]); res.dead[B].push(rec[B][1]); res.ms[B].push(rec[B][2]); });
+    res.seeds = s; res.live = s < NS; renderSweep(res);
+    $('mProg').style.width = (100 * s / NS).toFixed(0) + '%';
+    const per = (performance.now() - t0) / s / 1000;
+    batchStatus(s < NS ? stepLabel(s + 1, NS, `시작 · 남은 시간 약 ${Math.ceil(per * (NS - s))}초`) : '');
+  }
+  res.live = false; if (res.seeds) renderSweep(res);
+  batchStatus(BATCH_STOP ? `${res.seeds}/${NS} 시드에서 중지 · 완료된 시드만 표시` : `완료 · n=${D.ntr}, d=${D.d}, k=${k}, T=${T}`);
+  if (!res.seeds) $('mOut').innerHTML = '<div class="empty">완료된 시드가 없음 · 다시 실행</div>';
+}
+function renderSweep(res) {
+  const c = res.cfg, Bs = res.Bs;
+  const med = B => median(res.rel[B]);
+  const best = Bs.reduce((a, b) => med(b) < med(a) ? b : a, Bs[0]);
+  const lawB = lawHyper(c.ntr, c.k, c.T).B;
+  // strip plot: one row per batch size
+  const all = Bs.flatMap(B => res.rel[B]).sort((a, b) => a - b);
+  const q = p => all[Math.min(all.length - 1, Math.max(0, Math.floor(p * (all.length - 1))))];
+  let lo = Math.min(-0.5, q(0.02)), hi = Math.max(0.5, q(0.98)); const span = hi - lo; lo -= span * 0.05; hi += span * 0.05;
+  const W = 900, rowH = 30, L = 170, R = 80, T0 = 26, H = T0 + Bs.length * rowH + 30;
+  const sx = v => L + (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo) * (W - L - R);
+  const stepRaw = (hi - lo) / 6, mag = Math.pow(10, Math.floor(Math.log10(stepRaw))), st = [1, 2, 5, 10].map(m => m * mag).find(v => v >= stepRaw);
+  let s = '';
+  for (let v = Math.ceil(lo / st) * st; v <= hi; v += st) { const vv = +v.toFixed(6); s += `<line x1="${sx(vv)}" x2="${sx(vv)}" y1="${T0 - 6}" y2="${H - 26}" stroke="${TH.line}"/><text x="${sx(vv)}" y="${H - 10}" text-anchor="middle" font-size="12" fill="${TH.muted}" font-family="IBM Plex Mono, monospace">${vv > 0 ? '+' : ''}${vv}%</text>`; }
+  s += `<line x1="${sx(0)}" x2="${sx(0)}" y1="${T0 - 10}" y2="${H - 26}" stroke="${TH.ink}" stroke-width="1.5"/><text x="${sx(0)}" y="${T0 - 12}" text-anchor="middle" font-size="11" fill="${TH.ink}">Lloyd@25 (분할)</text>`;
+  s += `<text x="${W - R + 6}" y="${T0 - 12}" font-size="11" fill="${TH.muted}">중앙값</text>`;
+  const jr = mulberry32(7);
+  Bs.forEach((B, i) => {
+    const y = T0 + i * rowH + rowH / 2, m = med(B);
+    if (i % 2 === 0) s += `<rect x="0" y="${y - rowH / 2}" width="${W}" height="${rowH}" fill="${TH.chip}" opacity="0.45"/>`;
+    s += `<text x="${L - 12}" y="${y + 4}" text-anchor="end" font-size="13" fill="${TH.ink}" font-weight="${B === best ? 700 : 400}">B = ${B}${B === lawB ? ' (공식)' : ''}</text>`;
+    res.rel[B].forEach(x => { const out = x > hi || x < lo; s += `<circle cx="${sx(x)}" cy="${y + (jr() - 0.5) * 14}" r="3.4" fill="${out ? 'none' : TH.accent}" stroke="${TH.accent}" stroke-width="${out ? 1.5 : 0}" opacity="0.8"/>`; });
+    s += `<line x1="${sx(m)}" x2="${sx(m)}" y1="${y - 11}" y2="${y + 11}" stroke="${TH.ink}" stroke-width="2.5"/>`;
+    s += `<text x="${W - R + 6}" y="${y + 4}" font-size="12" fill="${TH.ink}" font-family="IBM Plex Mono, monospace">${pct(m)}</text>`;
+  });
+  // median vs B, with time on a second series
+  const CW = 900, CH = 260, cl = 64, cr = 70, ct = 16, cb = 40;
+  const lb = B => cl + (Math.log2(B) - Math.log2(Bs[0])) / Math.max(1, Math.log2(Bs[Bs.length - 1]) - Math.log2(Bs[0])) * (CW - cl - cr);
+  const meds = Bs.map(med), times = Bs.map(B => median(res.ms[B]));
+  let ylo = Math.min(...meds, -0.2), yhi = Math.max(...meds, 0.2); const pd = (yhi - ylo) * 0.12; ylo -= pd; yhi += pd;
+  const ly = v => ct + (yhi - v) / (yhi - ylo) * (CH - ct - cb);
+  const tmax = Math.max(...times) * 1.15, ty = v => ct + (1 - v / tmax) * (CH - ct - cb);
+  let g = '';
+  const yst = (() => { const raw = (yhi - ylo) / 5, m = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 5, 10].map(x => x * m).find(v => v >= raw); })();
+  for (let v = Math.ceil(ylo / yst) * yst; v <= yhi; v += yst) { const vv = +v.toFixed(6); g += `<line x1="${cl}" x2="${CW - cr}" y1="${ly(vv)}" y2="${ly(vv)}" stroke="${TH.line}"/><text x="${cl - 8}" y="${ly(vv) + 4}" text-anchor="end" font-size="12" fill="${TH.muted}" font-family="IBM Plex Mono, monospace">${vv > 0 ? '+' : ''}${vv}%</text>`; }
+  g += `<line x1="${cl}" x2="${CW - cr}" y1="${ly(0)}" y2="${ly(0)}" stroke="${TH.ink}" stroke-width="1.5"/>`;
+  Bs.forEach(B => g += `<text x="${lb(B)}" y="${CH - 18}" text-anchor="middle" font-size="12" fill="${TH.muted}" font-family="IBM Plex Mono, monospace">${B}</text>`);
+  g += `<text x="${CW - cr}" y="${CH - 2}" text-anchor="end" font-size="12" fill="${TH.muted}">배치 크기 B (로그)</text>`;
+  g += `<path d="${Bs.map((B, i) => (i ? 'L' : 'M') + lb(B).toFixed(1) + ' ' + ty(times[i]).toFixed(1)).join('')}" fill="none" stroke="${TH.muted}" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+  g += `<text x="${lb(Bs[Bs.length - 1]) + 6}" y="${ty(times[times.length - 1]) + 4}" font-size="11" fill="${TH.muted}">실행 시간</text>`;
+  g += `<path d="${Bs.map((B, i) => (i ? 'L' : 'M') + lb(B).toFixed(1) + ' ' + ly(meds[i]).toFixed(1)).join('')}" fill="none" stroke="${TH.accent}" stroke-width="3"/>`;
+  Bs.forEach((B, i) => g += `<circle cx="${lb(B)}" cy="${ly(meds[i])}" r="${B === best ? 6 : 4}" fill="${TH.accent}" stroke="${TH.surface}" stroke-width="1.5"/>`);
+  g += `<text x="${lb(Bs[Bs.length - 1]) + 6}" y="${ly(meds[meds.length - 1]) + 4}" font-size="11" fill="${TH.accent}">상대 MSE</text>`;
+  const tbl = Bs.map(B => { const v = res.rel[B], w = v.filter(x => x < 0).length; return `<tr><td>B = ${B}${B === lawB ? ' <small class="muted">(논문 공식)</small>' : ''}</td><td class="r">${Math.ceil(c.ntr / B)}</td><td class="r">${res.U[B]}</td><td class="r">${res.eta[B].toFixed(2)}</td><td class="r">${pct(median(v))}</td><td class="r">${w}/${v.length}</td><td class="r">${median(res.dead[B]).toFixed(1)}</td><td class="r">${Math.round(median(res.ms[B]))}</td></tr>`; }).join('');
+  const ds = PRESETS[c.key].label;
+  $('mOut').innerHTML = `
+    <div class="summary"><b>${res.live ? '<span class="live-dot"></span>' : ''}배치 크기 비교 · ${ds}, k=${c.k}, ${res.seeds}/${c.NS}시드${res.live ? ' · 진행 중' : ''}</b><br>
+      e-means ${c.T}에폭에서 상대 테스트 MSE 중앙값이 가장 낮은 배치 크기: <b>B = ${best}</b> (${pct(med(best))}) · 논문 공식 B = ${lawB}
+      <span class="small muted">B가 작을수록 에폭당 갱신이 많아 빨리 수렴하지만 배치 평균이 흔들림 · 크면 반대 · η₀ = ${$('mEta').value === 'law' ? 'B마다 논문 공식' : '고정 ' + $('mEta').value} · 학습 ${c.ntr} · 테스트 ${c.nte}점, d=${c.d}</span></div>
+    <div class="block"><h3>배치 크기별 상대 테스트 MSE (왼쪽일수록 좋음)</h3><p>점 하나 = 시드 하나 · 검은 세로선 = 중앙값 · 굵은 글씨 = 중앙값이 가장 낮은 B</p><div class="scroll-x"><svg viewBox="0 0 ${W} ${H}" style="min-width:640px">${s}</svg></div></div>
+    <div class="block"><h3>중앙값과 실행 시간</h3><p>실선 = 상대 MSE 중앙값 · 점선 = 이 브라우저에서 잰 e-means 실행 시간 (상대 크기만 의미, 오른쪽 축 없음)</p><div class="scroll-x"><svg viewBox="0 0 ${CW} ${CH}" style="min-width:640px">${g}</svg></div></div>
+    <div class="block"><h3>표로 보기</h3><div class="scroll-x"><table><thead><tr><th>배치 크기</th><th class="r">1에폭 배치 수</th><th class="r">총 갱신</th><th class="r">η₀</th><th class="r">상대 MSE 중앙값</th><th class="r">기준보다 낮은 시드</th><th class="r">죽은 군집 (10점 미만)</th><th class="r">실행 시간 ms</th></tr></thead><tbody>${tbl}</tbody></table></div></div>`;
+}
+
 function renderBatch(res) {
   const c = res.cfg;
   const all = MROWS.flatMap(r => res.rows[r.id]);
@@ -661,8 +800,8 @@ function renderBatch(res) {
   const tbl = MROWS.map(r => { const v = res.rows[r.id]; const w = v.filter(x => x < 0).length; return `<tr><td>${r.name.replace('T', c.T)}</td><td class="r">${r.id === 'L2' ? '0 (기준)' : pct(median(v))}</td><td class="r">${r.id === 'L2' ? '–' : `${w}/${v.length}`}</td><td class="r">${median(res.dead[r.id]).toFixed(1)} <small class="muted">(${(median(res.dead[r.id]) / c.k * 100).toFixed(1)}%)</small></td><td class="r">${median(res.empty[r.id]).toFixed(1)}</td></tr>`; }).join('');
   const ds = PRESETS[c.key].label;
   $('mOut').innerHTML = `
-    <div class="summary"><b>결과 요약 · ${ds}, k=${c.k}, ${c.NS}시드</b><br>
-      e-means <b>${c.T}에폭</b>: ${c.NS}개 시드 중 <b>${wins}개</b>에서 Lloyd 25에폭(빈 군집 분할)보다 테스트 MSE 낮음 · 상대 오차 중앙값 <b>${pct(medE)}</b>
+    <div class="summary"><b>${res.live ? '<span class="live-dot"></span>' : ''}결과 요약 · ${ds}, k=${c.k}, ${res.rows.E.length}/${c.NS}시드${res.live ? ' · 진행 중' : ''}</b><br>
+      e-means <b>${c.T}에폭</b>: ${res.rows.E.length}개 시드 중 <b>${wins}개</b>에서 Lloyd 25에폭(빈 군집 분할)보다 테스트 MSE 낮음 · 상대 오차 중앙값 <b>${pct(medE)}</b>
       ${reachOK.length ? `<br>Lloyd@25 도달에 필요한 예산: 도달한 시드 ${reachOK.length}개 중앙값 <b>${median(reachOK)}에폭</b> (측정 예산 ${BUDGETS.join(', ')})` : `<br>측정 예산(최대 10에폭) 안에서 Lloyd@25 미도달`}
       <span class="small muted">B=${c.B}, η₀=${c.eta0.toFixed(2)}, ρ=0.1, 학습 ${c.ntr} · 테스트 ${c.nte}점, d=${c.d}.</span></div>
     <div class="block"><h3>시드별 상대 테스트 MSE (왼쪽일수록 좋음)</h3><p class="small muted">점 하나 = 시드 하나 · 검은 세로선 = 중앙값 · 빈 원 = 축 범위 밖 값 (가장자리에 표시)</p><div class="scroll-x"><svg viewBox="0 0 ${W} ${H}" style="min-width:640px">${s}</svg></div></div>
@@ -690,9 +829,10 @@ function syncOutputs() {
   $('cKOut').textContent = $('cK').value; $('cBOut').textContent = BVALS[+$('cB').value - 3];
   $('cEtaOut').textContent = (+$('cEta').value).toFixed(2); $('cRhoOut').textContent = (+$('cRho').value).toFixed(2);
   $('cSpeedOut').textContent = SPEED_LABEL[+$('cSpeed').value];
+  if (LAB.D) { const B = BVALS[+$('cB').value - 3], nb = Math.ceil(LAB.D.ntr / B); $('cBInfo').textContent = `1에폭 = ${nb}배치 · e-means 갱신 ${Math.max(1, Math.round(+$('cT').value * nb))}회`; }
   const c = readLab();
   const revTxt = { split: '분할', resample: '재표본화', off: '처리 안 함' }[c.revival];
-  $('advSummary').textContent = `k=${c.k} · B=${c.B} · η₀=${c.eta0.toFixed(2)} · ρ=${c.rho.toFixed(2)} · ${revTxt}${c.cosine ? '' : ' · cosine 끔'}${c.finalize ? '' : ' · 마무리 끔'}${c.split ? ' · Lloyd 분할' : ''}`;
+  $('advSummary').textContent = `k=${c.k} · ρ=${c.rho.toFixed(2)} · ${revTxt}${c.cosine ? '' : ' · cosine 끔'}${c.finalize ? '' : ' · 마무리 끔'}${c.split ? ' · Lloyd 분할' : ''}`;
 }
 function makeMethods(cfg, D, C0) {
   return {
@@ -733,7 +873,7 @@ function buildLab() {
   $('hS').textContent = `25에폭 · B=${cfg.B}`;
   $('hE').textContent = `${cfg.T}에폭 · B=${cfg.B} · η₀=${cfg.eta0.toFixed(2)}`;
   const law = lawHyper(LAB.D.ntr, cfg.k, cfg.T);
-  $('cLawOut').textContent = `n=${LAB.D.ntr}, k=${cfg.k}, T=${cfg.T} → B=${law.B}, η₀=${law.eta0.toFixed(2)}`;
+  $('cLawOut').textContent = `(B=${law.B}, η₀=${law.eta0.toFixed(2)})`;
   syncOutputs(); setPlaying(false); drawLab(true);
 }
 function pushTrail(key) {
@@ -921,11 +1061,13 @@ function boot() {
   $('mK').addEventListener('input', () => $('mKOut').textContent = $('mK').value); $('mKOut').textContent = $('mK').value;
   msel.addEventListener('change', () => { const p = PRESETS[msel.value]; $('mK').value = p.k; $('mKOut').textContent = p.k; });
   $('mRun').addEventListener('click', runBatch);
+  const syncMode = () => { $('mB').disabled = $('mMode').value === 'sweep'; };
+  $('mMode').addEventListener('change', syncMode); syncMode();
   $('tabRun').addEventListener('click', () => selectTab('run'));
   $('tabBatch').addEventListener('click', () => selectTab('batch'));
   [$('tabRun'), $('tabBatch')].forEach(t => t.addEventListener('keydown', e => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { const other = t.id === 'tabRun' ? 'batch' : 'run'; selectTab(other); $(other === 'run' ? 'tabRun' : 'tabBatch').focus(); } }));
   buildLab();
-  const rerender = () => { refreshTheme(); if (LAB.M) drawLab(true); if (LAST_BATCH) renderBatch(LAST_BATCH); };
+  const rerender = () => { refreshTheme(); if (LAB.M) drawLab(true); if (LAST_BATCH) renderBatch(LAST_BATCH); else if (LAST_SWEEP) renderSweep(LAST_SWEEP); };
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', rerender);
   new MutationObserver(rerender).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
   let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (!$('viewRun').hidden) drawLab(false); }, 120); });
