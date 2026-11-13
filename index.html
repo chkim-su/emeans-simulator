@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--ARTIFACT-START-->
+<title>e-means 비교 시뮬레이터</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Operate surface for a Notion embed: toolbar → three synced panels → timeline chart that doubles as the playhead.
+   World contributes: Plex type, a field-green palette, compact density, and the chart-as-scrubber move. */
+:root {
+  --bg: #F3F6F4;
+  --surface: #FFFFFF;
+  --field: #E6ECE9;
+  --ink: #14201B;
+  --muted: #55635D;
+  --line: #CBD5D0;
+  --chip: #E2EAE6;
+  --accent: #0B6E61;
+  --lloyd: #9A4E22;
+  --sculley: #4E62A3;
+  --warn: #B23A1E;
+  --good: #2C7A3A;
+  --sel: #BFE3DB;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --r: 8px;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101614; --surface: #171F1C; --field: #1B2522; --ink: #E1E9E5; --muted: #9AA8A2; --line: #2E3A36; --chip: #222E2A;
+    --accent: #3CC3AD; --lloyd: #E48E58; --sculley: #93A7E8; --warn: #F2785E; --good: #70C47E; --sel: #1E5249;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101614; --surface: #171F1C; --field: #1B2522; --ink: #E1E9E5; --muted: #9AA8A2; --line: #2E3A36; --chip: #222E2A;
+  --accent: #3CC3AD; --lloyd: #E48E58; --sculley: #93A7E8; --warn: #F2785E; --good: #70C47E; --sel: #1E5249;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 14px 20px; word-break: keep-all; overflow-wrap: anywhere;
+}
+::selection { background: var(--sel); color: var(--ink); }
+* { scrollbar-color: var(--line) transparent; scrollbar-width: thin; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+h1, h2, h3 { margin: 0; line-height: 1.3; text-wrap: balance; }
+p { margin: 0; }
+.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: 12.5px; }
+
+/* header + tabs */
+.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: var(--s3) var(--s5); margin-bottom: var(--s3); }
+.title h1 { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+.title p { color: var(--muted); font-size: 13px; max-width: 70ch; margin-top: 2px; }
+.tabs { display: inline-flex; gap: 2px; background: var(--chip); padding: 3px; border-radius: 9px; }
+.tabs button { border: 0; background: transparent; padding: 6px 12px; border-radius: 7px; font-weight: 500; color: var(--muted); }
+.tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 0.12); }
+
+/* controls */
+button, select, input { font: inherit; color: var(--ink); }
+button { font-size: 13px; padding: 6px 12px; border-radius: 7px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; white-space: nowrap; transition: background-color 120ms ease-out; }
+button:hover:not(:disabled) { background: var(--chip); }
+button:active:not(:disabled) { transform: translateY(1px); }
+button.primary { background: var(--ink); border-color: var(--ink); color: var(--bg); font-weight: 600; min-width: 84px; }
+button.primary:hover:not(:disabled) { background: var(--ink); opacity: 0.88; }
+button:disabled { opacity: 0.45; cursor: default; }
+select, input[type="number"] { font-size: 13px; padding: 5px 8px; border-radius: 7px; border: 1px solid var(--line); background: var(--surface); width: 100%; min-width: 0; }
+input[type="range"] { width: 100%; accent-color: var(--accent); margin: 2px 0; }
+input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; }
+.field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.field > label, .field > .lbl { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 6px; }
+.field output { font-family: var(--font-data); color: var(--ink); font-size: 12px; }
+.check { display: flex; align-items: center; gap: 7px; font-size: 13px; cursor: pointer; }
+.toolbar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s2) var(--s3); align-items: end; }
+.seed-row { display: flex; gap: 4px; }
+.seed-row input { flex: 1; }
+.transport { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin-top: var(--s3); }
+.transport .speed { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.transport .speed input { width: 110px; }
+.clock { margin-left: auto; font-size: 12.5px; color: var(--muted); }
+.clock b { color: var(--ink); font-weight: 500; }
+details.adv { margin-top: var(--s3); border-top: 1px solid var(--line); padding-top: var(--s2); }
+details.adv summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink); list-style: none; display: flex; align-items: center; gap: 6px; width: fit-content; }
+details.adv summary::-webkit-details-marker { display: none; }
+details.adv summary svg { transition: transform 160ms ease-out; }
+details.adv[open] summary svg { transform: rotate(90deg); }
+.adv-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s3); margin-top: var(--s3); }
+.adv-grid .wide2 { grid-column: span 2; }
+.law { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+
+/* panels */
+.panels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s3); margin-top: var(--s4); }
+.mp { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.mp-head { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.sw { flex: none; width: 14px; height: 3px; border-radius: 2px; background: var(--mc); transform: translateY(-3px); }
+.mp-head b { font-size: 14px; font-weight: 700; white-space: nowrap; }
+.mp-head span { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.mp canvas { width: 100%; aspect-ratio: 1 / 1; display: block; border-radius: var(--r); background: var(--field); }
+.stats { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 2px 8px; }
+.stats div { display: flex; flex-direction: column; min-width: 0; }
+.stats span { font-size: 11.5px; color: var(--muted); }
+.stats b { font-family: var(--font-data); font-weight: 500; font-size: 13.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pill { display: inline-block; font-family: var(--font-body); font-size: 11.5px; font-weight: 600; padding: 0 7px; border-radius: 999px; line-height: 19px; }
+.pill.bad { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
+.pill.ok { background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good); }
+
+/* timeline */
+.timeline { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: var(--s4); margin-top: var(--s4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: var(--s3); }
+.chart-wrap { min-width: 0; }
+.chart-wrap .cap { font-size: 12px; color: var(--muted); margin-bottom: 4px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+#labChart { width: 100%; height: 220px; display: block; cursor: ew-resize; touch-action: none; }
+.legend { display: flex; flex-direction: column; gap: 7px; font-size: 13px; min-width: 0; }
+.legend .li { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 7px; align-items: baseline; }
+.legend .li .sw { transform: translateY(-3px); }
+.legend .li b { font-family: var(--font-data); font-weight: 500; font-variant-numeric: tabular-nums; }
+.legend .li small { color: var(--muted); font-family: var(--font-data); font-size: 11.5px; margin-left: 4px; }
+.verdict { border-top: 1px solid var(--line); padding-top: 8px; line-height: 1.5; }
+.verdict .small { display: block; margin-top: 4px; }
+.tips { margin-top: var(--s3); font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.tips span { display: inline-flex; align-items: center; gap: 6px; }
+.key-dead { width: 12px; height: 12px; border-radius: 50%; border: 2px dashed var(--warn); display: inline-block; }
+.key-rev { width: 16px; height: 0; border-top: 2px dashed var(--warn); display: inline-block; }
+
+/* batch tab */
+.batch-intro { max-width: 72ch; color: var(--muted); font-size: 13px; margin-bottom: var(--s3); }
+.batch-tools { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--s2) var(--s3); align-items: end; }
+.run-row { display: flex; align-items: center; gap: var(--s3); margin-top: var(--s3); flex-wrap: wrap; }
+.progress { height: 5px; background: var(--chip); border-radius: 3px; overflow: hidden; flex: 1 1 140px; max-width: 320px; }
+.progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 160ms ease-out; }
+.batch-out { display: flex; flex-direction: column; gap: var(--s4); margin-top: var(--s4); }
+.empty { border: 1px dashed var(--line); border-radius: var(--r); padding: var(--s4); color: var(--muted); font-size: 13px; }
+.summary { background: color-mix(in srgb, var(--accent) 9%, var(--surface)); border-radius: var(--r); padding: var(--s3) var(--s4); line-height: 1.6; }
+.summary .small { display: block; margin-top: 4px; color: var(--muted); }
+.block h3 { font-size: 14px; font-weight: 600; }
+.block p { font-size: 12.5px; color: var(--muted); margin: 2px 0 6px; }
+.scroll-x { overflow-x: auto; }
+.block svg { width: 100%; height: auto; display: block; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+th { font-weight: 600; color: var(--muted); font-size: 12px; }
+td.r, th.r { text-align: right; font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+footer { margin-top: var(--s4); font-size: 11.5px; color: var(--muted); }
+
+@media (max-width: 760px) {
+  .toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .adv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .batch-tools { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .timeline { grid-template-columns: 1fr; }
+  .clock { margin-left: 0; width: 100%; }
+}
+@media (max-width: 560px) {
+  .panels { grid-template-columns: 1fr; }
+  .batch-tools { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .adv-grid .wide2 { grid-column: span 2; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+<!--HEAD-END-->
+</head>
+<body>
+<!--BODY-START-->
+<div class="top">
+  <div class="title">
+    <h1>e-means 비교 시뮬레이터</h1>
+    <p>Lloyd · Sculley 미니배치 · e-means를 같은 데이터, 같은 초기 중심에서 나란히 학습 · 계산은 모두 브라우저에서 수행</p>
+  </div>
+  <div class="tabs" role="tablist" aria-label="보기 선택">
+    <button role="tab" id="tabRun" aria-selected="true" aria-controls="viewRun" type="button">한 번 실행</button>
+    <button role="tab" id="tabBatch" aria-selected="false" aria-controls="viewBatch" type="button">여러 시드 비교</button>
+  </div>
+</div>
+
+<section id="viewRun" role="tabpanel" aria-labelledby="tabRun">
+  <div class="toolbar">
+    <div class="field"><label for="cData">데이터</label><select id="cData"></select></div>
+    <div class="field"><label for="cInit">초기 중심</label><select id="cInit">
+      <option value="bad">나쁜 초기화 (먼 중심 1개)</option>
+      <option value="random">무작위 (논문 기본)</option>
+      <option value="kpp">k-means++</option>
+    </select></div>
+    <div class="field"><label for="cSeed">시드</label><div class="seed-row"><input type="number" id="cSeed" min="1" max="99999" value="1" inputmode="numeric"><button id="cSeedNext" type="button" title="시드를 1 올리고 다시 시작">다음</button></div></div>
+    <div class="field"><label for="cT">e-means 예산 T</label><select id="cT">
+      <option value="0.5">0.5 에폭</option><option value="1">1 에폭</option><option value="2">2 에폭</option><option value="3" selected>3 에폭</option><option value="5">5 에폭</option><option value="10">10 에폭</option>
+    </select></div>
+  </div>
+
+  <details class="adv" id="adv">
+    <summary><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1.5 7 5 3 8.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>세부 설정 <span class="muted small" id="advSummary"></span></summary>
+    <div class="adv-grid">
+      <div class="field"><label for="cK">중심 개수 k <output id="cKOut"></output></label><input type="range" id="cK" min="2" max="30" step="1" value="3"></div>
+      <div class="field"><label for="cB">배치 크기 B <output id="cBOut"></output></label><input type="range" id="cB" min="3" max="10" step="1" value="7"></div>
+      <div class="field"><label for="cEta">첫 이동 폭 η₀ <output id="cEtaOut"></output></label><input type="range" id="cEta" min="0.02" max="1" step="0.02" value="0.6"></div>
+      <div class="field"><label for="cRho">마지막/처음 비율 ρ <output id="cRhoOut"></output></label><input type="range" id="cRho" min="0" max="1" step="0.05" value="0.1"></div>
+      <div class="field"><label for="cRev">e-means 죽은 군집 처리</label><select id="cRev">
+        <option value="split">분할 재활성화 (논문)</option><option value="resample">배치 점으로 재표본화</option><option value="off">처리 안 함</option>
+      </select></div>
+      <div class="field"><span class="lbl">e-means 구성</span>
+        <label class="check"><input type="checkbox" id="cCos" checked> cosine 일정</label>
+        <label class="check"><input type="checkbox" id="cFin" checked> 마지막 에폭 평균으로 마무리</label>
+      </div>
+      <div class="field"><span class="lbl">Lloyd 기준선</span>
+        <label class="check"><input type="checkbox" id="cSplit"> 빈 군집 분할 (Faiss식)</label>
+      </div>
+      <div class="field"><span class="lbl">논문 공식 (식 6–7)</span>
+        <div class="law"><button id="cLaw" type="button">B, η₀ 자동 설정</button></div>
+        <span class="small muted num" id="cLawOut"></span>
+      </div>
+    </div>
+  </details>
+
+  <div class="transport">
+    <button class="primary" id="bPlay" type="button">재생</button>
+    <button id="bStep" type="button">한 배치</button>
+    <button id="bEpoch" type="button">한 에폭</button>
+    <button id="bReset" type="button">처음으로</button>
+    <label class="speed" for="cSpeed">속도 <input type="range" id="cSpeed" min="0" max="9" step="1" value="3"> <output id="cSpeedOut" class="num"></output></label>
+    <span class="clock num" id="labClock"><b>0.00</b> / 25 에폭</span>
+  </div>
+
+  <div class="panels">
+    <div class="mp" style="--mc: var(--lloyd)">
+      <div class="mp-head"><i class="sw"></i><b>Lloyd</b><span id="hL"></span></div>
+      <canvas id="cvL" role="img" aria-label="Lloyd의 현재 중심과 배정"></canvas>
+      <div class="stats" id="sL"></div>
+    </div>
+    <div class="mp" style="--mc: var(--sculley)">
+      <div class="mp-head"><i class="sw"></i><b>Sculley</b><span id="hS"></span></div>
+      <canvas id="cvS" role="img" aria-label="Sculley 미니배치의 현재 중심과 배정"></canvas>
+      <div class="stats" id="sS"></div>
+    </div>
+    <div class="mp" style="--mc: var(--accent)">
+      <div class="mp-head"><i class="sw"></i><b>e-means</b><span id="hE"></span></div>
+      <canvas id="cvE" role="img" aria-label="e-means의 현재 중심과 배정"></canvas>
+      <div class="stats" id="sE"></div>
+    </div>
+  </div>
+
+  <div class="timeline">
+    <div class="chart-wrap">
+      <div class="cap"><span>테스트 MSE (로그) · 에폭 (로그)</span><span>곡선 위를 누르거나 끌면 그 시점으로 이동</span></div>
+      <canvas id="labChart" role="slider" tabindex="0" aria-label="재생 위치 (에폭)" aria-valuemin="0" aria-valuemax="25" aria-valuenow="0"></canvas>
+    </div>
+    <div class="legend" id="labLegend" aria-live="polite"></div>
+  </div>
+  <div class="tips">
+    <span>점 색 = 가장 가까운 중심</span>
+    <span>가는 선 = 중심의 이동 경로</span>
+    <span><i class="key-dead"></i>점을 하나도 받지 못한 중심</span>
+    <span><i class="key-rev"></i>재활성화 (죽은 중심 → 새 위치)</span>
+  </div>
+</section>
+
+<section id="viewBatch" role="tabpanel" aria-labelledby="tabBatch" hidden>
+  <p class="batch-intro">데이터 고정, 초기 중심과 배치 순서만 바꿔 반복 학습 · 지표: Lloyd 25에폭(빈 군집 분할) 대비 상대 테스트 MSE (논문과 동일) · e-means 변형: 논문 Table 1 ablation의 축소판</p>
+  <div class="batch-tools">
+    <div class="field"><label for="mData">데이터</label><select id="mData"></select></div>
+    <div class="field"><label for="mK">k <output id="mKOut"></output></label><input type="range" id="mK" min="2" max="40" step="1" value="32"></div>
+    <div class="field"><label for="mInit">초기 중심</label><select id="mInit"><option value="random" selected>무작위</option><option value="kpp">k-means++</option><option value="bad">나쁜 초기화</option></select></div>
+    <div class="field"><label for="mSeeds">시드 수</label><select id="mSeeds"><option>10</option><option selected>20</option><option>40</option></select></div>
+    <div class="field"><label for="mT">e-means 예산 T</label><select id="mT"><option value="1">1 에폭</option><option value="2">2 에폭</option><option value="3" selected>3 에폭</option><option value="5">5 에폭</option></select></div>
+    <div class="field"><label for="mHyp">B와 η₀</label><select id="mHyp"><option value="law" selected>논문 공식</option><option value="lab">한 번 실행 탭의 값</option></select></div>
+  </div>
+  <div class="run-row">
+    <button class="primary" id="mRun" type="button">비교 실행</button>
+    <div class="progress" aria-hidden="true"><i id="mProg"></i></div>
+    <span class="small muted num" id="mStatus" aria-live="polite">고차원 20시드 기준 20–30초 소요</span>
+  </div>
+  <div class="batch-out" id="mOut"><div class="empty">아직 실행 전 · “비교 실행” → 시드마다 Lloyd 2종, Sculley, e-means 예산 7가지·변형 4가지 학습 → 시드별 분포, 에폭별 중앙값 곡선, 표 표시</div></div>
+</section>
+
+<footer>Bessa et al., “e-means: outperforming k-means (in one-tenth the epochs)”, arXiv:2611.09501의 방법(§3.1 식 2–5, 부록 H, 식 6–7)을 따른 교육용 구현 · 논문 재현 아님 · 테마 고정: 주소 끝에 <span class="num">?theme=dark</span> 또는 <span class="num">?theme=light</span></footer>
+
+<script>
+"use strict";
+/* ================= theme ================= */
+const root = document.documentElement;
+const TH = {};
+function isDark() {
+  const t = root.getAttribute('data-theme');
+  if (t === 'dark') return true;
+  if (t === 'light') return false;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+function refreshTheme() {
+  const cs = getComputedStyle(root);
+  ['--bg','--surface','--field','--ink','--muted','--line','--accent','--lloyd','--sculley','--warn','--good','--chip'].forEach(k => TH[k.slice(2)] = cs.getPropertyValue(k).trim());
+  TH.dark = isDark();
+  CLR = [];
+}
+let CLR = [];
+function clusterColor(j, a) {
+  const h = (j * 137.508 + 195) % 360;
+  const L = TH.dark ? 64 : 44, S = TH.dark ? 55 : 60;
+  return a == null ? `hsl(${h.toFixed(1)} ${S}% ${L}%)` : `hsl(${h.toFixed(1)} ${S}% ${L}% / ${a})`;
+}
+
+/* ================= rng & helpers ================= */
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function randn(r) { let u = 0; while (u === 0) u = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r()); }
+function perm(n, r) { const p = new Int32Array(n); for (let i = 0; i < n; i++) p[i] = i; for (let i = n - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const t = p[i]; p[i] = p[j]; p[j] = t; } return p; }
+const fmt = (v, d = 3) => (v == null || !isFinite(v)) ? '–' : (Math.abs(v) >= 100 ? v.toFixed(1) : Math.abs(v) >= 10 ? v.toFixed(2) : v.toFixed(d));
+const pct = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2) + '%';
+const median = a => { const b = [...a].sort((x, y) => x - y); const m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
+
+/* ================= datasets ================= */
+const PRESETS = {
+  three:  { label: '세 무리 (k=3)', k: 3, d: 2, init: 'bad' },
+  imbal:  { label: '불균형 12무리', k: 12, d: 2, init: 'random' },
+  grid:   { label: '격자 16무리', k: 16, d: 2, init: 'random' },
+  elong:  { label: '길쭉한 무리 5개 + 넓은 무리', k: 6, d: 2, init: 'random' },
+  uniform:{ label: '균일 분포 (진짜 군집 없음)', k: 10, d: 2, init: 'random' },
+  highd:  { label: '고차원 불균형 (d=32, 32무리)', k: 32, d: 32, init: 'random', batchOnly: true },
+};
+function genPoints(key, r) {
+  const P = []; const push = (x, y) => P.push([x, y]);
+  if (key === 'three') {
+    const cs = [[-9, -8], [-2, 0], [5, -8]];
+    for (const c of cs) for (let i = 0; i < 800; i++) push(c[0] + 1.2 * randn(r), c[1] + 1.2 * randn(r));
+  } else if (key === 'imbal') {
+    const cs = []; let tries = 0;
+    while (cs.length < 12 && tries++ < 5000) { const c = [-11 + 22 * r(), -11 + 22 * r()]; if (cs.every(o => Math.hypot(o[0] - c[0], o[1] - c[1]) > 4.2)) cs.push(c); }
+    cs.forEach((c, j) => { const m = Math.max(14, Math.round(520 * Math.pow(0.72, j))); const s = 0.5 + 1.0 * r(); for (let i = 0; i < m; i++) push(c[0] + s * randn(r), c[1] + s * randn(r)); });
+  } else if (key === 'grid') {
+    for (const gx of [-9, -3, 3, 9]) for (const gy of [-9, -3, 3, 9]) for (let i = 0; i < 125; i++) push(gx + 0.9 * randn(r), gy + 0.9 * randn(r));
+  } else if (key === 'elong') {
+    const specs = [[-7, 6, 0.5], [6, 7, -0.4], [-6, -6, 1.2], [7, -5, 2.0], [0, 0, 0.1]];
+    for (const [cx, cy, a] of specs) for (let i = 0; i < 330; i++) { const u = 3.0 * randn(r), v = 0.45 * randn(r); push(cx + u * Math.cos(a) - v * Math.sin(a), cy + u * Math.sin(a) + v * Math.cos(a)); }
+    for (let i = 0; i < 380; i++) push(0 + 2.6 * randn(r), 9 + 1.2 * randn(r));
+  } else if (key === 'uniform') {
+    for (let i = 0; i < 2200; i++) push(-11 + 22 * r(), -11 + 22 * r());
+  }
+  return P;
+}
+function makeData(key, seed) {
+  const r = mulberry32(seed * 7919 + 17);
+  let d, pts;
+  if (key === 'highd') {
+    d = 32; pts = [];
+    const K = 32;
+    for (let j = 0; j < K; j++) {
+      const c = Array.from({ length: d }, () => 1.25 * randn(r));
+      const m = Math.max(24, Math.round(560 * Math.pow(0.9, j))); const s = 0.7 + 0.6 * r();
+      for (let i = 0; i < m; i++) pts.push(c.map(v => v + s * randn(r)));
+    }
+  } else { d = 2; pts = genPoints(key, r); }
+  const p = perm(pts.length, r);
+  const ntr = Math.round(pts.length * 0.62), nte = pts.length - ntr;
+  const X = new Float64Array(ntr * d), Y = new Float64Array(nte * d);
+  for (let i = 0; i < ntr; i++) for (let m = 0; m < d; m++) X[i * d + m] = pts[p[i]][m];
+  for (let i = 0; i < nte; i++) for (let m = 0; m < d; m++) Y[i * d + m] = pts[p[ntr + i]][m];
+  return { key, d, X, ntr, Y, nte };
+}
+
+/* ================= core ================= */
+function nearest(X, i, d, C, k) {
+  let best = Infinity, bj = 0; const o = i * d;
+  for (let j = 0; j < k; j++) { let s = 0; const q = j * d; for (let m = 0; m < d; m++) { const t = X[o + m] - C[q + m]; s += t * t; } if (s < best) { best = s; bj = j; } }
+  NEAR_D = best; return bj;
+}
+let NEAR_D = 0;
+function mseOf(X, n, d, C, k, lab, counts) {
+  let s = 0; if (counts) counts.fill(0);
+  for (let i = 0; i < n; i++) { const j = nearest(X, i, d, C, k); s += NEAR_D; if (lab) lab[i] = j; if (counts) counts[j]++; }
+  return s / n;
+}
+function initCentroids(D, k, mode, r) {
+  const { X, ntr, d } = D; const C = new Float64Array(k * d);
+  const copy = (j, i) => { for (let m = 0; m < d; m++) C[j * d + m] = X[i * d + m]; };
+  if (mode === 'random') {
+    const p = perm(ntr, r); for (let j = 0; j < k; j++) copy(j, p[j]);
+  } else if (mode === 'kpp') {
+    copy(0, Math.floor(r() * ntr));
+    const D2 = new Float64Array(ntr).fill(Infinity);
+    for (let j = 1; j < k; j++) {
+      let tot = 0; const q = (j - 1) * d;
+      for (let i = 0; i < ntr; i++) { let s = 0; for (let m = 0; m < d; m++) { const t = X[i * d + m] - C[q + m]; s += t * t; } if (s < D2[i]) D2[i] = s; tot += D2[i]; }
+      let u = r() * tot, pick = ntr - 1; for (let i = 0; i < ntr; i++) { u -= D2[i]; if (u <= 0) { pick = i; break; } }
+      copy(j, pick);
+    }
+  } else { // bad: k-1 crowded near a corner point + 1 far away
+    let corner = 0, bs = Infinity;
+    const off = r() * 0.6;
+    for (let i = 0; i < ntr; i++) { let s = 0; for (let m = 0; m < d; m++) s += X[i * d + m] * (m % 2 ? 1 : 1 + off); if (s < bs) { bs = s; corner = i; } }
+    const dist = []; for (let i = 0; i < ntr; i++) { let s = 0; for (let m = 0; m < d; m++) { const t = X[i * d + m] - X[corner * d + m]; s += t * t; } dist.push([s + 1e-9 * r(), i]); }
+    dist.sort((a, b) => a[0] - b[0]);
+    const pool = dist.slice(0, Math.max(k * 4, 40)); const pp = perm(pool.length, r);
+    for (let j = 0; j < k - 1; j++) copy(j, pool[pp[j]][1]);
+    for (let m = 0; m < d; m++) { let mx = -Infinity; for (let i = 0; i < ntr; i++) mx = Math.max(mx, X[i * d + m]); C[(k - 1) * d + m] = d === 2 ? 15 : mx + 3; }
+  }
+  return C;
+}
+class Batcher {
+  constructor(n, B, seed) { this.n = n; this.B = B; this.r = mulberry32(seed); this.p = perm(n, this.r); this.pos = 0; }
+  next() { if (this.pos >= this.n) { this.p = perm(this.n, this.r); this.pos = 0; } const s = this.pos, e = Math.min(this.n, s + this.B); this.pos = e; return [this.p, s, e]; }
+}
+function splitInto(C, d, donor, dead, eps) {
+  for (let m = 0; m < d; m++) { const v = C[donor * d + m]; const s = (m % 2 === 0) ? 1 : -1; C[donor * d + m] = v * (1 + s * eps); C[dead * d + m] = v * (1 - s * eps); }
+}
+class Lloyd {
+  constructor(D, C0, o) { this.D = D; this.d = D.d; this.k = C0.length / D.d; this.C = Float64Array.from(C0); this.split = !!o.split; this.r = mulberry32((o.seed || 1) * 31 + 5); this.epoch = 0; this.events = []; this.t = 0; }
+  step() {
+    const { X, ntr } = this.D, d = this.d, k = this.k, C = this.C;
+    const sum = new Float64Array(k * d), cnt = new Float64Array(k);
+    for (let i = 0; i < ntr; i++) { const j = nearest(X, i, d, C, k); cnt[j]++; for (let m = 0; m < d; m++) sum[j * d + m] += X[i * d + m]; }
+    for (let j = 0; j < k; j++) if (cnt[j] > 0) for (let m = 0; m < d; m++) C[j * d + m] = sum[j * d + m] / cnt[j];
+    if (this.split) {
+      for (let ci = 0; ci < k; ci++) {
+        if (cnt[ci] > 0) continue;
+        let tot = 0; for (let j = 0; j < k; j++) tot += Math.max(0, cnt[j] - 1);
+        if (tot <= 0) break;
+        let u = this.r() * tot, cj = 0; for (let j = 0; j < k; j++) { u -= Math.max(0, cnt[j] - 1); if (u <= 0) { cj = j; break; } }
+        const from = [C[ci * d], C[ci * d + 1]];
+        splitInto(C, d, cj, ci, 1 / 1024);
+        cnt[ci] = cnt[cj] / 2; cnt[cj] -= cnt[ci];
+        this.events.push({ dead: ci, donor: cj, from, to: [C[ci * d], C[ci * d + 1]] });
+      }
+    }
+    this.epoch++; this.t++;
+  }
+}
+class Sculley {
+  constructor(D, C0, o) { this.D = D; this.d = D.d; this.k = C0.length / D.d; this.C = Float64Array.from(C0); this.v = new Float64Array(this.k); this.bt = new Batcher(D.ntr, o.B, o.seed * 101 + 3); this.t = 0; this.events = []; }
+  stepBatch() {
+    const { X } = this.D, d = this.d, k = this.k, C = this.C; const [p, s, e] = this.bt.next();
+    const lab = new Int32Array(e - s);
+    for (let i = s; i < e; i++) lab[i - s] = nearest(X, p[i], d, C, k);
+    for (let i = s; i < e; i++) { const j = lab[i - s], o = p[i] * d; this.v[j]++; const eta = 1 / this.v[j]; for (let m = 0; m < d; m++) C[j * d + m] += eta * (X[o + m] - C[j * d + m]); }
+    this.t++;
+  }
+}
+class EMeans {
+  constructor(D, C0, o) {
+    this.D = D; this.d = D.d; const d = this.d; this.k = C0.length / d; const k = this.k;
+    this.C = Float64Array.from(C0); this.N = new Float64Array(k).fill(1e-10); this.S = new Float64Array(k * d);
+    for (let j = 0; j < k * d; j++) this.S[j] = C0[j] * 1e-10;
+    Object.assign(this, { B: o.B, eta0: o.eta0, rho: o.rho, cosine: o.cosine, revival: o.revival, finalize: o.finalize, T: o.T });
+    this.nb = Math.ceil(D.ntr / o.B); this.U = Math.max(1, Math.round(o.T * this.nb));
+    this.bt = new Batcher(D.ntr, o.B, o.seed * 101 + 3); this.r = mulberry32(o.seed * 53 + 11);
+    this.t = 0; this.done = false; this.lastLab = new Int32Array(D.ntr).fill(-1); this.events = []; this.curEta = this.eta(0); this.revived = 0;
+  }
+  eta(t) { return this.cosine ? this.eta0 * (this.rho + (1 - this.rho) * 0.5 * (1 + Math.cos(Math.PI * t / this.U))) : this.eta0; }
+  stepBatch() {
+    if (this.done) return;
+    const { X } = this.D, d = this.d, k = this.k, C = this.C, N = this.N, S = this.S; const [p, s, e] = this.bt.next();
+    const nj = new Float64Array(k), sj = new Float64Array(k * d); const rec = this.t >= this.U - this.nb;
+    for (let i = s; i < e; i++) { const idx = p[i]; const j = nearest(X, idx, d, C, k); nj[j]++; for (let m = 0; m < d; m++) sj[j * d + m] += X[idx * d + m]; if (rec) this.lastLab[idx] = j; }
+    const et = this.eta(this.t); this.curEta = et;
+    for (let j = 0; j < k; j++) { N[j] = (1 - et) * N[j] + et * nj[j]; for (let m = 0; m < d; m++) { S[j * d + m] = (1 - et) * S[j * d + m] + et * sj[j * d + m]; C[j * d + m] = S[j * d + m] / N[j]; } }
+    this.t++;
+    if (this.t % 5 === 0 && this.revival !== 'off') this.revive(p, s, e);
+    if (this.t >= this.U) { this.done = true; if (this.finalize) this.finalizeMean(); }
+  }
+  revive(p, s, e) {
+    const d = this.d, k = this.k, C = this.C, N = this.N, S = this.S;
+    let mean = 0; for (let j = 0; j < k; j++) mean += N[j]; mean /= k;
+    const thr = 0.1 * mean; const dead = []; for (let j = 0; j < k; j++) if (N[j] < thr) dead.push(j);
+    if (!dead.length) return;
+    const used = new Uint8Array(k); dead.forEach(j => used[j] = 1);
+    for (const dj of dead) {
+      const from = [C[dj * d], C[dj * d + (d > 1 ? 1 : 0)]];
+      if (this.revival === 'resample') {
+        const idx = p[s + Math.floor(this.r() * (e - s))];
+        for (let m = 0; m < d; m++) C[dj * d + m] = this.D.X[idx * d + m];
+        N[dj] = 0.5 * mean; for (let m = 0; m < d; m++) S[dj * d + m] = N[dj] * C[dj * d + m];
+        this.events.push({ dead: dj, donor: -1, from, to: [C[dj * d], C[dj * d + 1]] });
+      } else {
+        let tot = 0; for (let j = 0; j < k; j++) if (!used[j]) tot += N[j];
+        if (tot <= 0) break;
+        let u = this.r() * tot, dn = -1; for (let j = 0; j < k; j++) { if (used[j]) continue; u -= N[j]; dn = j; if (u <= 0) break; }
+        used[dn] = 1;
+        splitInto(C, d, dn, dj, 1 / 128);
+        N[dn] /= 2; N[dj] = N[dn];
+        for (let m = 0; m < d; m++) { S[dn * d + m] = N[dn] * C[dn * d + m]; S[dj * d + m] = N[dj] * C[dj * d + m]; }
+        this.events.push({ dead: dj, donor: dn, from, to: [C[dj * d], C[dj * d + 1]] });
+      }
+      this.revived++;
+    }
+  }
+  finalizeMean() {
+    const { X, ntr } = this.D, d = this.d, k = this.k, C = this.C;
+    const sum = new Float64Array(k * d), cnt = new Float64Array(k);
+    for (let i = 0; i < ntr; i++) { const j = this.lastLab[i]; if (j < 0) continue; cnt[j]++; for (let m = 0; m < d; m++) sum[j * d + m] += X[i * d + m]; }
+    for (let j = 0; j < k; j++) if (cnt[j] > 0) for (let m = 0; m < d; m++) C[j * d + m] = sum[j * d + m] / cnt[j];
+    this.finalized = true;
+  }
+}
+function lawHyper(n, k, T) {
+  let B = 0.035 * Math.pow(k, 0.13) * Math.pow(n, 0.88) * Math.pow(T, 0.81);
+  B = Math.pow(2, Math.round(Math.log2(Math.max(1, B)))); B = Math.min(B, Math.pow(2, Math.floor(Math.log2(n))));
+  B = Math.max(B, 8);
+  const eta0 = Math.min(0.824 * Math.pow(k, -0.46) * Math.pow(B, 0.90) * Math.pow(n, -0.45) * Math.pow(T, -0.11), 1);
+  return { B, eta0 };
+}
+
+/* ================= log-axis chart (canvas) ================= */
+function setupCanvas(cv, hCss) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = cv.clientWidth, h = hCss || cv.clientHeight;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); return { ctx, w, h };
+}
+function niceLogTicks(lo, hi) {
+  const out = []; const e0 = Math.floor(Math.log10(lo)), e1 = Math.ceil(Math.log10(hi));
+  for (let e = e0; e <= e1; e++) for (const m of [1, 2, 5]) { const v = m * Math.pow(10, e); if (v >= lo * 0.999 && v <= hi * 1.001) out.push(v); }
+  if (out.length < 3) { const fine = []; for (let e = e0; e <= e1; e++) for (const m of [1, 1.5, 2, 3, 4, 5, 6, 8]) { const v = m * Math.pow(10, e); if (v >= lo * 0.999 && v <= hi * 1.001) fine.push(v); } if (fine.length >= 3) return fine.length > 7 ? fine.filter((_, i) => i % 2 === 0) : fine; const out2 = []; for (let i = 0; i <= 4; i++) out2.push(lo * Math.pow(hi / lo, i / 4)); return out2; }
+  return out;
+}
+function drawCurveChart(cv, cfg) {
+  const { ctx, w, h } = setupCanvas(cv, cfg.h);
+  ctx.clearRect(0, 0, w, h);
+  const padL = 52, padR = 14, padT = 10, padB = 30;
+  const X0 = cfg.xmin, X1 = cfg.xmax; let Y0 = Infinity, Y1 = -Infinity;
+  cfg.series.forEach(s => s.pts.forEach(([, y]) => { if (y > 0 && isFinite(y)) { Y0 = Math.min(Y0, y); Y1 = Math.max(Y1, y); } }));
+  if (!isFinite(Y0)) return;
+  if (Y1 / Y0 < 1.05) { Y1 *= 1.03; Y0 /= 1.03; }
+  Y0 /= 1.04; Y1 *= 1.04;
+  const sx = x => padL + (Math.log(Math.max(x, X0)) - Math.log(X0)) / (Math.log(X1) - Math.log(X0)) * (w - padL - padR);
+  const sy = y => padT + (Math.log(Y1) - Math.log(y)) / (Math.log(Y1) - Math.log(Y0)) * (h - padT - padB);
+  cv._xmap = { padL, padR, w, X0, X1 };
+  ctx.font = '11px "IBM Plex Mono", monospace'; ctx.lineWidth = 1;
+  // grid
+  ctx.strokeStyle = TH.line; ctx.fillStyle = TH.muted; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  niceLogTicks(Y0, Y1).forEach(v => { const y = sy(v); ctx.globalAlpha = 0.7; ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke(); ctx.globalAlpha = 1; ctx.fillText(v >= 10 ? String(Math.round(v)) : v >= 1 ? (+v.toFixed(1)).toString() : (+v.toPrecision(2)).toString(), padL - 6, y); });
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  cfg.xticks.forEach(v => { const x = sx(v); ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, h - padB); ctx.stroke(); ctx.globalAlpha = 1; ctx.fillText(v === X0 && cfg.startLabel ? cfg.startLabel : String(v), x, h - padB + 6); });
+  // series
+  cfg.series.forEach(s => {
+    ctx.save(); ctx.strokeStyle = s.color; ctx.globalAlpha = s.alpha ?? 1; ctx.lineWidth = s.width || 2; if (s.dash) ctx.setLineDash(s.dash);
+    ctx.beginPath(); let lastPy = 0; s.pts.forEach(([x, y], i) => { const px = sx(x), py = sy(y); if (i === 0) ctx.moveTo(px, py); else { if (s.step) ctx.lineTo(px, lastPy); ctx.lineTo(px, py); } lastPy = py; }); ctx.stroke(); ctx.restore();
+    if (s.dot) { const [x, y] = s.pts[s.pts.length - 1]; ctx.fillStyle = s.color; ctx.beginPath(); ctx.arc(sx(x), sy(y), 4, 0, 7); ctx.fill(); ctx.strokeStyle = TH.surface; ctx.lineWidth = 1.5; ctx.stroke(); }
+  });
+  if (cfg.playhead) { const px = sx(cfg.playhead); ctx.save(); ctx.strokeStyle = TH.ink; ctx.globalAlpha = 0.35; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px, padT); ctx.lineTo(px, h - padB); ctx.stroke(); ctx.restore(); }
+  (cfg.labels || []).forEach(L => { ctx.fillStyle = L.color; ctx.font = '11px "IBM Plex Sans KR", sans-serif'; ctx.textAlign = L.align || 'left'; ctx.textBaseline = L.below ? 'top' : 'bottom'; ctx.fillText(L.text, sx(L.x), sy(L.y) + (L.below ? 4 : -3)); });
+}
+
+
+/* ================= batch comparison ================= */
+const MROWS = [
+  { id: 'L2', name: 'Lloyd 25 · 빈 군집 분할 (기준)', color: 'lloyd' },
+  { id: 'L1', name: 'Lloyd 25 · 분할 없음', color: 'lloyd', faint: true },
+  { id: 'S', name: 'Sculley 25', color: 'sculley' },
+  { id: 'E', name: 'e-means T · 전체 레시피', color: 'accent' },
+  { id: 'Enc', name: 'e-means T · cosine 없음', color: 'accent', faint: true },
+  { id: 'Enr', name: 'e-means T · 재활성화 없음', color: 'accent', faint: true },
+  { id: 'Ers', name: 'e-means T · 재표본화', color: 'accent', faint: true },
+  { id: 'Enf', name: 'e-means T · 마무리 없음', color: 'accent', faint: true },
+];
+const BUDGETS = [0.25, 0.5, 1, 2, 3, 5, 10];
+let BATCH_RUNNING = false, LAST_BATCH = null;
+function runEM(D, C0, o) { const E = new EMeans(D, C0, o); while (!E.done) E.stepBatch(); return E; }
+function deadCount(m, D) { const cnt = new Float64Array(m.k); mseOf(D.X, D.ntr, D.d, m.C, m.k, null, cnt); let z = 0; for (const c of cnt) if (c === 0) z++; return z; }
+async function runBatch() {
+  if (BATCH_RUNNING) return; BATCH_RUNNING = true; $('mRun').disabled = true; $('mRun').textContent = '실행 중…'; $('mOut').innerHTML = '<div class="empty">계산 중 · 완료된 시드 수는 위에 표시</div>';
+  const key = $('mData').value, k = +$('mK').value, init = $('mInit').value, NS = +$('mSeeds').value, T = +$('mT').value;
+  const D = makeData(key, 1);
+  let hp = $('mHyp').value === 'law' ? lawHyper(D.ntr, k, T) : { B: BVALS[+$('cB').value - 3], eta0: +$('cEta').value };
+  const base = { B: hp.B, eta0: hp.eta0, rho: 0.1, cosine: true, revival: 'split', finalize: true, T };
+  const res = { rows: {}, curves: { L1: [], L2: [], S: [], E: [] }, dead: {}, cfg: { key, k, init, NS, T, ...hp, ntr: D.ntr, nte: D.nte, d: D.d } };
+  MROWS.forEach(r => { res.rows[r.id] = []; res.dead[r.id] = []; });
+  const nb = Math.ceil(D.ntr / hp.B);
+  for (let s = 1; s <= NS; s++) {
+    const C0 = initCentroids(D, k, init, mulberry32(s * 7717 + 3));
+    const L1 = new Lloyd(D, C0, { split: false, seed: s }), L2 = new Lloyd(D, C0, { split: true, seed: s }), Sc = new Sculley(D, C0, { B: hp.B, seed: s });
+    const c1 = [], c2 = [], cs = [];
+    for (let ep = 1; ep <= 25; ep++) { L1.step(); L2.step(); for (let b = 0; b < nb; b++) Sc.stepBatch(); c1.push(testMSE(L1, D)); c2.push(testMSE(L2, D)); cs.push(testMSE(Sc, D)); }
+    const ref = c2[24];
+    const rel = v => (v - ref) / ref * 100;
+    res.curves.L1.push(c1.map(rel)); res.curves.L2.push(c2.map(rel)); res.curves.S.push(cs.map(rel));
+    res.rows.L2.push(0); res.rows.L1.push(rel(c1[24])); res.rows.S.push(rel(cs[24]));
+    res.dead.L1.push(deadCount(L1, D)); res.dead.L2.push(deadCount(L2, D)); res.dead.S.push(deadCount(Sc, D));
+    const bc = [];
+    for (const Tb of BUDGETS) { const E = runEM(D, C0, { ...base, T: Tb, seed: s }); const v = rel(testMSE(E, D)); bc.push(v); if (Tb === T) { res.rows.E.push(v); res.dead.E.push(deadCount(E, D)); } }
+    res.curves.E.push(bc);
+    const variants = { Enc: { cosine: false }, Enr: { revival: 'off' }, Ers: { revival: 'resample' }, Enf: { finalize: false } };
+    for (const [id, ov] of Object.entries(variants)) { const E = runEM(D, C0, { ...base, ...ov, seed: s }); res.rows[id].push(rel(testMSE(E, D))); res.dead[id].push(deadCount(E, D)); }
+    $('mProg').style.width = (100 * s / NS).toFixed(0) + '%'; $('mStatus').textContent = `${s} / ${NS} 시드 완료`;
+    await new Promise(r => setTimeout(r, 0));
+  }
+  LAST_BATCH = res; renderBatch(res);
+  $('mStatus').textContent = `완료 · n=${D.ntr}, d=${D.d}, k=${k}, B=${hp.B}, η₀=${hp.eta0.toFixed(2)}`;
+  BATCH_RUNNING = false; $('mRun').disabled = false; $('mRun').textContent = '다시 실행';
+}
+function renderBatch(res) {
+  const c = res.cfg;
+  const all = MROWS.flatMap(r => res.rows[r.id]);
+  const sorted = [...all].sort((a, b) => a - b);
+  const q = p => sorted[Math.min(sorted.length - 1, Math.max(0, Math.floor(p * (sorted.length - 1))))];
+  let lo = Math.min(-0.5, q(0.02)), hi = Math.max(0.5, q(0.97));
+  const span = hi - lo; lo -= span * 0.05; hi += span * 0.05;
+  const W = 900, rowH = 34, L = 230, R = 70, T = 26, H = T + MROWS.length * rowH + 30;
+  const sx = v => L + (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo) * (W - L - R);
+  let s = '';
+  const ticks = []; const stepRaw = (hi - lo) / 6; const mag = Math.pow(10, Math.floor(Math.log10(stepRaw))); const st = [1, 2, 5, 10].map(m => m * mag).find(v => v >= stepRaw);
+  for (let v = Math.ceil(lo / st) * st; v <= hi; v += st) ticks.push(+v.toFixed(6));
+  ticks.forEach(v => s += `<line x1="${sx(v)}" x2="${sx(v)}" y1="${T - 6}" y2="${H - 26}" stroke="${TH.line}"/><text x="${sx(v)}" y="${H - 10}" text-anchor="middle" font-size="12" fill="${TH.muted}" font-family="IBM Plex Mono, monospace">${v > 0 ? '+' : ''}${+v.toFixed(3)}%</text>`);
+  s += `<line x1="${sx(0)}" x2="${sx(0)}" y1="${T - 10}" y2="${H - 26}" stroke="${TH.ink}" stroke-width="1.5"/><text x="${sx(0)}" y="${T - 12}" text-anchor="middle" font-size="11" fill="${TH.ink}">Lloyd@25 (분할)</text>`;
+  s += `<text x="${W - R + 4}" y="${T - 12}" font-size="11" fill="${TH.muted}">중앙값</text>`;
+  const jr = mulberry32(99);
+  MROWS.forEach((r, i) => {
+    const y = T + i * rowH + rowH / 2; const col = TH[r.color]; const v = res.rows[r.id]; const med = median(v);
+    if (i % 2 === 0) s += `<rect x="0" y="${y - rowH / 2}" width="${W}" height="${rowH}" fill="${TH.chip}" opacity="0.45"/>`;
+    s += `<text x="${L - 12}" y="${y + 4}" text-anchor="end" font-size="13" fill="${TH.ink}" opacity="${r.faint ? 0.75 : 1}">${r.name.replace('T', c.T)}</text>`;
+    v.forEach(x => { const out = x > hi || x < lo; s += `<circle cx="${sx(x)}" cy="${y + (jr() - 0.5) * 16}" r="${out ? 4 : 3.4}" fill="${out ? 'none' : col}" stroke="${col}" stroke-width="${out ? 1.5 : 0}" opacity="${r.faint ? 0.55 : 0.85}"/>`; });
+    if (r.id !== 'L2') s += `<line x1="${sx(med)}" x2="${sx(med)}" y1="${y - 12}" y2="${y + 12}" stroke="${TH.ink}" stroke-width="2.5"/>`;
+    s += `<text x="${W - R + 4}" y="${y + 4}" font-size="12" fill="${TH.ink}" font-family="IBM Plex Mono, monospace">${r.id === 'L2' ? '0' : pct(med)}</text>`;
+  });
+  // budget curve
+  const BW = 900, BH = 320, bl = 64, br = 120, bt = 16, bb = 40;
+  const xs = [0.25, 25]; const lx = x => bl + (Math.log(x) - Math.log(xs[0])) / (Math.log(xs[1]) - Math.log(xs[0])) * (BW - bl - br);
+  const medCurve = arrs => arrs[0].map((_, i) => median(arrs.map(a => a[i])));
+  const cL2 = medCurve(res.curves.L2), cL1 = medCurve(res.curves.L1), cS = medCurve(res.curves.S), cE = medCurve(res.curves.E);
+  const vals = [...cL2, ...cL1, ...cS, ...cE].filter(isFinite);
+  let ylo = Math.min(...vals, -0.3), yhi = Math.max(...vals, 0.3);
+  const capHi = Math.max(2, (Math.max(...cE, ...cS.slice(-1), ...cL2.slice(2)) + 0.3) * 1.6);
+  yhi = Math.min(yhi, capHi);
+  const pad = (yhi - ylo) * 0.08; ylo -= pad; yhi += pad;
+  const ly = v => bt + (yhi - Math.min(yhi, Math.max(ylo, v))) / (yhi - ylo) * (BH - bt - bb);
+  let b = '';
+  const yst = (() => { const raw = (yhi - ylo) / 5; const m = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 5, 10].map(x => x * m).find(v => v >= raw); })();
+  for (let v = Math.ceil(ylo / yst) * yst; v <= yhi; v += yst) b += `<line x1="${bl}" x2="${BW - br}" y1="${ly(v)}" y2="${ly(v)}" stroke="${TH.line}"/><text x="${bl - 8}" y="${ly(v) + 4}" text-anchor="end" font-size="12" fill="${TH.muted}" font-family="IBM Plex Mono, monospace">${v > 0 ? '+' : ''}${+v.toFixed(3)}%</text>`;
+  [0.25, 0.5, 1, 2, 3, 5, 10, 25].forEach(x => b += `<text x="${lx(x)}" y="${BH - 18}" text-anchor="middle" font-size="12" fill="${TH.muted}" font-family="IBM Plex Mono, monospace">${x}</text>`);
+  b += `<text x="${BW - br}" y="${BH - 2}" text-anchor="end" font-size="12" fill="${TH.muted}">에폭 (Lloyd·Sculley: 진행 중 위치 / e-means: 그 예산으로 끝까지 학습)</text>`;
+  b += `<line x1="${bl}" x2="${BW - br}" y1="${ly(0)}" y2="${ly(0)}" stroke="${TH.ink}" stroke-width="1.5"/>`;
+  const path = (xsArr, ysArr) => xsArr.map((x, i) => (i ? 'L' : 'M') + lx(x).toFixed(1) + ' ' + ly(ysArr[i]).toFixed(1)).join('');
+  const ep = Array.from({ length: 25 }, (_, i) => i + 1);
+  const lines = [[ep, cL1, TH.lloyd, '4 4', 'Lloyd (분할 없음)'], [ep, cL2, TH.lloyd, '', 'Lloyd (분할)'], [ep, cS, TH.sculley, '', 'Sculley'], [BUDGETS, cE, TH.accent, '', 'e-means']];
+  lines.forEach(([x, y, col, dash, name]) => {
+    b += `<path d="${path(x, y)}" fill="none" stroke="${col}" stroke-width="${name === 'e-means' ? 3 : 2}" ${dash ? `stroke-dasharray="${dash}"` : ''}/>`;
+    if (name === 'e-means') x.forEach((xx, i) => b += `<circle cx="${lx(xx)}" cy="${ly(y[i])}" r="4" fill="${col}"/>`);
+    const lastX = x[x.length - 1], lastY = y[y.length - 1];
+    b += `<text x="${lx(lastX) + 8}" y="${ly(lastY) + 4 + (name === 'Lloyd (분할 없음)' ? 12 : name === 'Sculley' ? -8 : 0)}" font-size="12" fill="${col}">${name}</text>`;
+  });
+  // reach epochs
+  const reach = res.curves.E.map(bc => { const i = bc.findIndex(v => v <= 0); return i < 0 ? null : BUDGETS[i]; });
+  const reachOK = reach.filter(v => v != null);
+  const wins = res.rows.E.filter(v => v < 0).length;
+  const medE = median(res.rows.E);
+  const tbl = MROWS.map(r => { const v = res.rows[r.id]; const w = v.filter(x => x < 0).length; return `<tr><td>${r.name.replace('T', c.T)}</td><td class="r">${r.id === 'L2' ? '0 (기준)' : pct(median(v))}</td><td class="r">${r.id === 'L2' ? '–' : `${w}/${v.length}`}</td><td class="r">${median(res.dead[r.id]).toFixed(1)}</td></tr>`; }).join('');
+  const ds = PRESETS[c.key].label;
+  $('mOut').innerHTML = `
+    <div class="summary"><b>결과 요약 · ${ds}, k=${c.k}, ${c.NS}시드</b><br>
+      e-means <b>${c.T}에폭</b>: ${c.NS}개 시드 중 <b>${wins}개</b>에서 Lloyd 25에폭(빈 군집 분할)보다 테스트 MSE 낮음 · 상대 오차 중앙값 <b>${pct(medE)}</b>
+      ${reachOK.length ? `<br>Lloyd@25 도달에 필요한 예산: 도달한 시드 ${reachOK.length}개 중앙값 <b>${median(reachOK)}에폭</b> (측정 예산 ${BUDGETS.join(', ')})` : `<br>측정 예산(최대 10에폭) 안에서 Lloyd@25 미도달`}
+      <span class="small muted">B=${c.B}, η₀=${c.eta0.toFixed(2)}, ρ=0.1, 학습 ${c.ntr} · 테스트 ${c.nte}점, d=${c.d}.</span></div>
+    <div class="block"><h3>시드별 상대 테스트 MSE (왼쪽일수록 좋음)</h3><p class="small muted">점 하나 = 시드 하나 · 검은 세로선 = 중앙값 · 빈 원 = 축 범위 밖 값 (가장자리에 표시)</p><div class="scroll-x"><svg viewBox="0 0 ${W} ${H}" style="min-width:640px">${s}</svg></div></div>
+    <div class="block"><h3>에폭에 따른 중앙값 곡선</h3><p class="small muted">0 선 = Lloyd 25에폭(분할) · e-means 점 = 예산 T마다 cosine 일정·마무리까지 따로 학습한 결과 (논문 Table 4 방식, Lloyd 곡선과 성격 다름)</p><div class="scroll-x"><svg viewBox="0 0 ${BW} ${BH}" style="min-width:640px">${b}</svg></div></div>
+    <div class="block"><h3>표로 보기</h3><div class="scroll-x"><table><thead><tr><th>방법</th><th class="r">상대 MSE 중앙값</th><th class="r">기준보다 낮은 시드</th><th class="r">죽은 중심 (중앙값)</th></tr></thead><tbody>${tbl}</tbody></table></div></div>`;
+}
+
+
+/* ================= UI: single run ================= */
+const $ = id => document.getElementById(id);
+const BVALS = [8, 16, 32, 64, 128, 256, 512, 1024];
+const SPEEDS = [0.05, 0.15, 0.4, 1, 2, 4, 8, 16, 40, 100];
+const SPEED_LABEL = ['아주 느리게', '느리게', '조금 느리게', '보통', '2배', '4배', '8배', '16배', '40배', '최대'];
+const VIEW = 16;
+const LAB = { playing: false, acc: 0 };
+
+function readLab() {
+  return {
+    key: $('cData').value, k: +$('cK').value, init: $('cInit').value, seed: Math.max(1, Math.min(99999, +$('cSeed').value | 0)),
+    T: +$('cT').value, B: BVALS[+$('cB').value - 3], eta0: +$('cEta').value, rho: +$('cRho').value,
+    revival: $('cRev').value, cosine: $('cCos').checked, finalize: $('cFin').checked, split: $('cSplit').checked,
+  };
+}
+function syncOutputs() {
+  $('cKOut').textContent = $('cK').value; $('cBOut').textContent = BVALS[+$('cB').value - 3];
+  $('cEtaOut').textContent = (+$('cEta').value).toFixed(2); $('cRhoOut').textContent = (+$('cRho').value).toFixed(2);
+  $('cSpeedOut').textContent = SPEED_LABEL[+$('cSpeed').value];
+  const c = readLab();
+  const revTxt = { split: '분할', resample: '재표본화', off: '처리 안 함' }[c.revival];
+  $('advSummary').textContent = `k=${c.k} · B=${c.B} · η₀=${c.eta0.toFixed(2)} · ρ=${c.rho.toFixed(2)} · ${revTxt}${c.cosine ? '' : ' · cosine 끔'}${c.finalize ? '' : ' · 마무리 끔'}${c.split ? ' · Lloyd 분할' : ''}`;
+}
+function makeMethods(cfg, D, C0) {
+  return {
+    L: new Lloyd(D, C0, { split: cfg.split, seed: cfg.seed }),
+    S: new Sculley(D, C0, { B: cfg.B, seed: cfg.seed }),
+    E: new EMeans(D, C0, { B: cfg.B, eta0: cfg.eta0, rho: cfg.rho, cosine: cfg.cosine, revival: cfg.revival, finalize: cfg.finalize, T: cfg.T, seed: cfg.seed }),
+  };
+}
+function testMSE(m, D) { return mseOf(D.Y, D.nte, D.d, m.C, m.k); }
+function prerun(cfg, D, C0) {
+  const M = makeMethods(cfg, D, C0); const nb = Math.ceil(D.ntr / cfg.B); const gmax = 25 * nb;
+  const x0 = 1 / nb / 2; const t0 = testMSE(M.L, D);
+  const g = { L: [[x0, t0]], S: [[x0, t0]], E: [[x0, t0]], nb, gmax, x0 };
+  for (let it = 1; it <= gmax; it++) {
+    M.S.stepBatch(); g.S.push([it / nb, testMSE(M.S, D)]);
+    if (!M.E.done) { M.E.stepBatch(); g.E.push([it / nb, testMSE(M.E, D)]); if (M.E.done) g.Efinal = testMSE(M.E, D); }
+    if (it % nb === 0) { M.L.step(); g.L.push([it / nb, testMSE(M.L, D)]); }
+  }
+  g.Lfinal = g.L[g.L.length - 1][1]; g.Sfinal = g.S[g.S.length - 1][1];
+  if (g.Efinal == null) g.Efinal = g.E[g.E.length - 1][1];
+  g.Eend = M.E.U / nb; g.Erevived = M.E.revived; g.Lsplits = M.L.events.length;
+  return g;
+}
+function resetMethods() {
+  LAB.M = makeMethods(LAB.cfg, LAB.D, LAB.C0);
+  LAB.g = 0; LAB.acc = 0;
+  LAB.trails = { L: [], S: [], E: [] }; LAB.fx = { L: [], S: [], E: [] }; LAB.seen = { L: 0, S: 0, E: 0 };
+  ['L', 'S', 'E'].forEach(k => pushTrail(k));
+}
+function buildLab() {
+  const cfg = readLab(); LAB.cfg = cfg;
+  LAB.D = makeData(cfg.key, 1);
+  LAB.C0 = initCentroids(LAB.D, cfg.k, cfg.init, mulberry32(cfg.seed * 977 + 1));
+  LAB.ghost = prerun(cfg, LAB.D, LAB.C0);
+  LAB.nb = LAB.ghost.nb; LAB.gmax = LAB.ghost.gmax;
+  resetMethods();
+  $('hL').textContent = cfg.split ? '25에폭 · 빈 군집 분할' : '25에폭 · 에폭당 1회';
+  $('hS').textContent = `25에폭 · B=${cfg.B}`;
+  $('hE').textContent = `${cfg.T}에폭 · B=${cfg.B} · η₀=${cfg.eta0.toFixed(2)}`;
+  const law = lawHyper(LAB.D.ntr, cfg.k, cfg.T);
+  $('cLawOut').textContent = `n=${LAB.D.ntr}, k=${cfg.k}, T=${cfg.T} → B=${law.B}, η₀=${law.eta0.toFixed(2)}`;
+  syncOutputs(); setPlaying(false); drawLab(true);
+}
+function pushTrail(key) {
+  const m = LAB.M[key], k = m.k, d = m.d; const pos = new Float64Array(k * 2);
+  for (let j = 0; j < k; j++) { pos[j * 2] = m.C[j * d]; pos[j * 2 + 1] = m.C[j * d + 1]; }
+  const tr = LAB.trails[key]; tr.push(pos); if (tr.length > 70) tr.shift();
+}
+function advance(withFx = true) {
+  if (LAB.g >= LAB.gmax) return false;
+  LAB.g++; const M = LAB.M;
+  M.S.stepBatch(); pushTrail('S');
+  if (!M.E.done) { M.E.stepBatch(); pushTrail('E'); }
+  if (LAB.g % LAB.nb === 0) { M.L.step(); pushTrail('L'); }
+  ['L', 'S', 'E'].forEach(key => { const ev = M[key].events; while (LAB.seen[key] < ev.length) { if (withFx) LAB.fx[key].push({ ...ev[LAB.seen[key]], t0: performance.now() }); LAB.seen[key]++; } });
+  return true;
+}
+function seekTo(gTarget) {
+  gTarget = Math.max(0, Math.min(LAB.gmax, Math.round(gTarget)));
+  if (gTarget < LAB.g) resetMethods();
+  while (LAB.g < gTarget) advance(false);
+  drawLab(false);
+}
+function setPlaying(p) {
+  LAB.playing = p;
+  $('bPlay').textContent = p ? '일시정지' : (LAB.g >= LAB.gmax ? '다시 재생' : (LAB.g > 0 ? '계속' : '재생'));
+  $('bPlay').setAttribute('aria-pressed', p ? 'true' : 'false');
+}
+function w2p(x, y, W) { return [(x + VIEW) / (2 * VIEW) * W, (VIEW - y) / (2 * VIEW) * W]; }
+function ensureColors() { if (!CLR.length) for (let j = 0; j < 40; j++) CLR.push({ s: clusterColor(j), f: clusterColor(j, TH.dark ? 0.16 : 0.13), p: clusterColor(j, 0.85) }); }
+function drawPanel(cv, key) {
+  const { ctx, w } = setupCanvas(cv, cv.clientWidth); const W = w;
+  const m = LAB.M[key], D = LAB.D, k = m.k, C = m.C; ensureColors();
+  ctx.fillStyle = TH.field; ctx.fillRect(0, 0, W, W);
+  const cells = 64, cs = W / cells; const tmp = new Float64Array(2);
+  for (let gy = 0; gy < cells; gy++) for (let gx = 0; gx < cells; gx++) {
+    tmp[0] = -VIEW + (gx + 0.5) / cells * 2 * VIEW; tmp[1] = VIEW - (gy + 0.5) / cells * 2 * VIEW;
+    const j = nearest(tmp, 0, 2, C, k); ctx.fillStyle = CLR[j].f; const x0 = Math.round(gx * cs), y0 = Math.round(gy * cs); ctx.fillRect(x0, y0, Math.round((gx + 1) * cs) - x0, Math.round((gy + 1) * cs) - y0);
+  }
+  const lab = new Int32Array(D.ntr), cnt = new Float64Array(k);
+  const trm = mseOf(D.X, D.ntr, 2, C, k, lab, cnt);
+  const ps = Math.max(1.5, W / 240);
+  for (let j = 0; j < k; j++) {
+    ctx.fillStyle = CLR[j].p; ctx.beginPath();
+    for (let i = 0; i < D.ntr; i++) if (lab[i] === j) { const [px, py] = w2p(D.X[i * 2], D.X[i * 2 + 1], W); ctx.rect(px - ps / 2, py - ps / 2, ps, ps); }
+    ctx.fill();
+  }
+  const tr = LAB.trails[key];
+  ctx.lineWidth = 1.2; ctx.strokeStyle = TH.ink; ctx.globalAlpha = 0.45;
+  for (let j = 0; j < k; j++) { ctx.beginPath(); let prev = null; for (const pos of tr) { const [px, py] = w2p(pos[j * 2], pos[j * 2 + 1], W); if (!prev || Math.hypot(px - prev[0], py - prev[1]) > W * 0.25) ctx.moveTo(px, py); else ctx.lineTo(px, py); prev = [px, py]; } ctx.stroke(); }
+  ctx.globalAlpha = 1;
+  const now = performance.now(); const fx = LAB.fx[key];
+  for (let i = fx.length - 1; i >= 0; i--) {
+    const e = fx[i], age = (now - e.t0) / 1600; if (age > 1) { fx.splice(i, 1); continue; }
+    const ease = 1 - Math.pow(1 - age, 3);
+    const [ax, ay] = w2p(e.from[0], e.from[1], W), [bx, by] = w2p(e.to[0], e.to[1], W);
+    ctx.save(); ctx.globalAlpha = 1 - age; ctx.strokeStyle = TH.warn; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(bx, by, 8 + 22 * ease, 0, 7); ctx.stroke(); ctx.restore();
+  }
+  const R = Math.max(4.5, W / 60); let dead = 0;
+  for (let j = 0; j < k; j++) {
+    const [px, py] = w2p(C[j * 2], C[j * 2 + 1], W);
+    if (cnt[j] === 0) { dead++; ctx.save(); ctx.strokeStyle = TH.warn; ctx.lineWidth = 2; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.arc(px, py, R + 4, 0, 7); ctx.stroke(); ctx.restore(); }
+    ctx.beginPath(); ctx.arc(px, py, R, 0, 7); ctx.fillStyle = CLR[j].s; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = TH.surface; ctx.stroke();
+    ctx.lineWidth = 1; ctx.strokeStyle = TH.ink; ctx.beginPath(); ctx.arc(px, py, R + 1.5, 0, 7); ctx.stroke();
+  }
+  return { trm, tem: testMSE(m, D), dead };
+}
+function statsHTML(items) { return items.map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join(''); }
+const deadPill = n => n ? `<span class="pill bad">${n}개</span>` : `<span class="pill ok">없음</span>`;
+function drawLab(full) {
+  const ep = LAB.g / LAB.nb; const M = LAB.M, G = LAB.ghost;
+  const rL = drawPanel($('cvL'), 'L'), rS = drawPanel($('cvS'), 'S'), rE = drawPanel($('cvE'), 'E');
+  $('sL').innerHTML = statsHTML([['테스트 MSE', fmt(rL.tem)], ['갱신', M.L.t + '회'], ['죽은 중심', deadPill(rL.dead)]]);
+  $('sS').innerHTML = statsHTML([['테스트 MSE', fmt(rS.tem)], ['갱신', M.S.t + '회'], ['죽은 중심', deadPill(rS.dead)]]);
+  const eState = M.E.done ? (M.E.finalized ? '끝·마무리' : '끝') : M.E.t + '회';
+  $('sE').innerHTML = statsHTML([['테스트 MSE', fmt(rE.tem)], ['갱신', eState], ['죽은 중심', deadPill(rE.dead)]]);
+  $('labClock').innerHTML = `<b>${ep.toFixed(2)}</b> / 25 에폭${M.E.done ? '' : ` · η=${M.E.curEta.toFixed(3)}`} · 재활성화 ${M.E.revived}회`;
+  const cv = $('labChart'); cv.setAttribute('aria-valuenow', ep.toFixed(2));
+  const cut = arr => arr.filter(([x]) => x <= ep + 1e-9);
+  const series = [
+    { pts: G.L, color: TH.lloyd, alpha: 0.25, width: 2, step: true }, { pts: G.S, color: TH.sculley, alpha: 0.25, width: 2 }, { pts: G.E, color: TH.accent, alpha: 0.25, width: 2 },
+    { pts: [[G.x0, G.Lfinal], [25, G.Lfinal]], color: TH.lloyd, alpha: 0.6, width: 1, dash: [5, 4] },
+    { pts: [[G.Eend, G.Efinal], [25, G.Efinal]], color: TH.accent, alpha: 0.75, width: 1.2, dash: [2, 3] },
+  ];
+  [['L', TH.lloyd], ['S', TH.sculley], ['E', TH.accent]].forEach(([k, c]) => {
+    const p = cut(G[k]); if (k === 'L' && p.length && ep > p[p.length - 1][0]) p.push([ep, p[p.length - 1][1]]);
+    if (p.length) series.push({ pts: p, color: c, width: 2.4, dot: true, step: k === 'L' });
+  });
+  drawCurveChart(cv, { h: 220, xmin: G.x0, xmax: 25, playhead: Math.max(ep, G.x0),
+    xticks: [G.x0, 0.1, 0.5, 1, 2, 5, 10, 25].filter((v, i) => i === 0 || v > G.x0 * 1.5), startLabel: '시작', series,
+    labels: [{ text: 'Lloyd 25에폭', x: 25, align: 'right', y: G.Lfinal, color: TH.lloyd, below: G.Lfinal < G.Efinal }, { text: `e-means ${LAB.cfg.T}에폭 최종`, x: Math.max(G.Eend * 1.1, 0.3), y: G.Efinal, color: TH.accent, below: G.Efinal <= G.Lfinal }] });
+  if (full) legend();
+}
+function legend() {
+  const G = LAB.ghost, c = LAB.cfg; const rel = v => (v - G.Lfinal) / G.Lfinal * 100; const r = rel(G.Efinal);
+  const verdict = r < -0.05 ? `e-means는 <b>${c.T}에폭</b>(Lloyd 순회의 ${(c.T / 25 * 100).toFixed(0)}%)만에 Lloyd 25에폭보다 테스트 MSE <b>${Math.abs(r).toFixed(2)}% 낮음</b>`
+    : r <= 0.05 ? `e-means ${c.T}에폭 ≈ Lloyd 25에폭 (${pct(r)})`
+    : `이 설정에서는 e-means ${c.T}에폭이 Lloyd 25에폭보다 <b>${r.toFixed(2)}% 높음</b> · 예산, η₀, 배치 크기, 시드 변경 권장`;
+  $('labLegend').innerHTML = `
+    <div class="li" style="--mc:var(--lloyd)"><i class="sw"></i><span>Lloyd 25에폭</span><b>${fmt(G.Lfinal)}</b></div>
+    <div class="li" style="--mc:var(--sculley)"><i class="sw"></i><span>Sculley 25에폭</span><b>${fmt(G.Sfinal)}<small>${pct(rel(G.Sfinal))}</small></b></div>
+    <div class="li" style="--mc:var(--accent)"><i class="sw"></i><span>e-means ${c.T}에폭</span><b>${fmt(G.Efinal)}<small>${pct(rel(G.Efinal))}</small></b></div>
+    <div class="verdict">${verdict}<span class="small muted">학습 ${LAB.D.ntr}점 · 테스트 ${LAB.D.nte}점 · 1에폭 = ${LAB.nb}배치 · 재활성화 ${G.Erevived}회 · Lloyd 분할 ${G.Lsplits}회</span></div>`;
+}
+function loop() {
+  const anyFx = LAB.fx && (LAB.fx.L.length + LAB.fx.S.length + LAB.fx.E.length);
+  if (LAB.playing) {
+    LAB.acc += SPEEDS[+$('cSpeed').value]; let moved = false;
+    while (LAB.acc >= 1) { LAB.acc -= 1; if (!advance()) { setPlaying(false); break; } moved = true; }
+    if (moved || anyFx) drawLab(false);
+  } else if (anyFx) drawLab(false);
+  requestAnimationFrame(loop);
+}
+function chartToG(clientX) {
+  const cv = $('labChart'), m = cv._xmap; if (!m) return 0;
+  const rect = cv.getBoundingClientRect(); const x = clientX - rect.left;
+  const f = Math.max(0, Math.min(1, (x - m.padL) / (m.w - m.padL - m.padR)));
+  const ep = Math.exp(Math.log(m.X0) + f * (Math.log(m.X1) - Math.log(m.X0)));
+  return f <= 0.001 ? 0 : ep * LAB.nb;
+}
+function initRun() {
+  const sel = $('cData');
+  for (const [k, p] of Object.entries(PRESETS)) if (!p.batchOnly) sel.add(new Option(p.label, k));
+  sel.value = 'three';
+  sel.addEventListener('change', () => { const p = PRESETS[sel.value]; $('cK').value = p.k; $('cInit').value = p.init; buildLab(); });
+  ['cK', 'cB', 'cEta', 'cRho'].forEach(id => { $(id).addEventListener('input', syncOutputs); $(id).addEventListener('change', buildLab); });
+  ['cInit', 'cT', 'cRev', 'cCos', 'cFin', 'cSplit', 'cSeed'].forEach(id => $(id).addEventListener('change', buildLab));
+  $('cSpeed').addEventListener('input', syncOutputs);
+  $('cSeedNext').addEventListener('click', () => { $('cSeed').value = Math.min(99999, (+$('cSeed').value | 0) + 1); buildLab(); });
+  $('cLaw').addEventListener('click', () => {
+    const c = readLab(); const L = lawHyper(LAB.D.ntr, c.k, c.T);
+    $('cB').value = BVALS.indexOf(L.B) + 3; $('cEta').value = Math.max(0.02, Math.round(L.eta0 * 50) / 50); buildLab();
+  });
+  $('bPlay').addEventListener('click', () => { if (LAB.g >= LAB.gmax) resetMethods(); setPlaying(!LAB.playing); });
+  $('bStep').addEventListener('click', () => { setPlaying(false); advance(); drawLab(false); });
+  $('bEpoch').addEventListener('click', () => { setPlaying(false); const target = (Math.floor(LAB.g / LAB.nb) + 1) * LAB.nb; while (LAB.g < target && advance()); drawLab(false); });
+  $('bReset').addEventListener('click', () => { setPlaying(false); resetMethods(); drawLab(false); setPlaying(false); });
+  const cv = $('labChart'); let dragging = false, pend = null;
+  const apply = () => { if (pend != null) { seekTo(pend); pend = null; setPlaying(false); } };
+  cv.addEventListener('pointerdown', e => { dragging = true; cv.setPointerCapture(e.pointerId); pend = chartToG(e.clientX); requestAnimationFrame(apply); });
+  cv.addEventListener('pointermove', e => { if (!dragging) return; pend = chartToG(e.clientX); requestAnimationFrame(apply); });
+  cv.addEventListener('pointerup', () => { dragging = false; });
+  cv.addEventListener('keydown', e => {
+    const step = e.shiftKey ? LAB.nb : 1;
+    if (e.key === 'ArrowRight') { e.preventDefault(); seekTo(LAB.g + step); setPlaying(false); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); seekTo(LAB.g - step); setPlaying(false); }
+    else if (e.key === 'Home') { e.preventDefault(); seekTo(0); setPlaying(false); }
+    else if (e.key === 'End') { e.preventDefault(); seekTo(LAB.gmax); setPlaying(false); }
+  });
+}
+
+/* ================= tabs + boot ================= */
+function selectTab(which) {
+  const run = which === 'run';
+  $('tabRun').setAttribute('aria-selected', run); $('tabBatch').setAttribute('aria-selected', !run);
+  $('viewRun').hidden = !run; $('viewBatch').hidden = run;
+  if (run) drawLab(false); else setPlaying(false);
+}
+function applyThemeParam() {
+  try {
+    const q = new URLSearchParams(location.search).get('theme') || (location.hash.match(/^#(dark|light)$/) || [])[1];
+    if (q === 'dark' || q === 'light') root.setAttribute('data-theme', q);
+  } catch (e) { /* ignore */ }
+}
+function boot() {
+  applyThemeParam(); refreshTheme(); initRun();
+  const msel = $('mData'); for (const [k, p] of Object.entries(PRESETS)) msel.add(new Option(p.label, k)); msel.value = 'highd';
+  $('mK').addEventListener('input', () => $('mKOut').textContent = $('mK').value); $('mKOut').textContent = $('mK').value;
+  msel.addEventListener('change', () => { const p = PRESETS[msel.value]; $('mK').value = p.k; $('mKOut').textContent = p.k; });
+  $('mRun').addEventListener('click', runBatch);
+  $('tabRun').addEventListener('click', () => selectTab('run'));
+  $('tabBatch').addEventListener('click', () => selectTab('batch'));
+  [$('tabRun'), $('tabBatch')].forEach(t => t.addEventListener('keydown', e => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { const other = t.id === 'tabRun' ? 'batch' : 'run'; selectTab(other); $(other === 'run' ? 'tabRun' : 'tabBatch').focus(); } }));
+  buildLab();
+  const rerender = () => { refreshTheme(); if (LAB.M) drawLab(true); if (LAST_BATCH) renderBatch(LAST_BATCH); };
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', rerender);
+  new MutationObserver(rerender).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (!$('viewRun').hidden) drawLab(false); }, 120); });
+  requestAnimationFrame(loop);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+
+</script>
+<!--BODY-END-->
+</body>
+</html>
